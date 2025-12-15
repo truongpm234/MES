@@ -15,10 +15,6 @@ builder.Services.AddSwaggerGen();
 // Configuration
 builder.Services.Configure<CloudinaryOptions>(
     builder.Configuration.GetSection("Cloudinary"));
-builder.Configuration
-    .AddJsonFile("appsettings.json", optional: false)
-    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true)
-    .AddEnvironmentVariables();
 
 // Application services
 builder.Services.AddScoped<IUploadFileService, UploadFileService>();
@@ -26,19 +22,24 @@ builder.Services.AddScoped<IUploadFileService, UploadFileService>();
 // Infrastructure services
 builder.Services.AddScoped<ICloudinaryFileStorageService, CloudinaryFileStorageService>();
 
-
 var app = builder.Build();
 
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
-    c.RoutePrefix = string.Empty;
+    // Serve the UI at /swagger instead of the app root
+    c.RoutePrefix = "swagger";
 });
 
-app.UseHttpsRedirection();
+if (app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseAuthorization();
+
+app.MapGet("/", () => Results.Ok("AMMS API is running"));
 
 app.MapControllers();
 
