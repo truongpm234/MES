@@ -1,4 +1,4 @@
-﻿using AMMS.Application.Interface;
+﻿using AMMS.Application.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 

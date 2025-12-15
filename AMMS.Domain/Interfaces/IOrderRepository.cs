@@ -9,6 +9,5 @@ namespace AMMS.Domain
 {
     public interface IOrderRepository
     {
-        Task<CreateCustomerOrderResponse> CreateCustomerOrderAsync(CreateCustomerOrderRequest req);
     }
 }

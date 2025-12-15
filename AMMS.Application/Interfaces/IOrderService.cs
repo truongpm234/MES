@@ -9,6 +9,5 @@ namespace AMMS.Application.Interfaces
 {
     public interface IOrderService
     {
-        Task<CreateCustomerOrderResponse> CreateCustomerOrderAsync(CreateCustomerOrderRequest req);
     }
 }

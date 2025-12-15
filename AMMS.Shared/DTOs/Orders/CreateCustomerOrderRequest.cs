@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace AMMS.Shared.DTOs.Orders
+﻿namespace AMMS.Shared.DTOs.Orders
 {
     public class CreateCustomerOrderRequest
     {
@@ -22,6 +16,7 @@ namespace AMMS.Shared.DTOs.Orders
 
         // UI extra
         public string? Description { get; set; }
-        public string? DesignFileUrl { get; set; }
+
+        public string? DesignFilePath { get; set; }
     }
 }
