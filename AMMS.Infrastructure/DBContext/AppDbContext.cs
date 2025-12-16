@@ -24,11 +24,15 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<order_item> order_items { get; set; }
 
+    public virtual DbSet<order_request> order_requests { get; set; }
+
+    public virtual DbSet<product_type> product_types { get; set; }
+
+    public virtual DbSet<product_type_process> product_type_processes { get; set; }
+
     public virtual DbSet<production> productions { get; set; }
 
-    public virtual DbSet<purchase> purchases { get; set; } 
-
-    public virtual DbSet<order_request> order_requests { get; set; }
+    public virtual DbSet<purchase> purchases { get; set; }
 
     public virtual DbSet<purchase_item> purchase_items { get; set; }
 
@@ -64,12 +68,6 @@ public partial class AppDbContext : DbContext
             entity.HasOne(d => d.order_item).WithMany(p => p.boms)
                 .HasForeignKey(d => d.order_item_id)
                 .HasConstraintName("boms_order_item_id_fkey");
-        });
-
-        modelBuilder.Entity<order_request>(entity =>
-        {
-            entity.HasKey(e => e.order_request_id);
-            entity.ToTable("order_request");
         });
 
         modelBuilder.Entity<customer>(entity =>
@@ -161,12 +159,56 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.paper_type).HasMaxLength(100);
             entity.Property(e => e.print_size).HasMaxLength(50);
             entity.Property(e => e.product_name).HasMaxLength(200);
-            entity.Property(e => e.product_type).HasMaxLength(50);
 
             entity.HasOne(d => d.order).WithMany(p => p.order_items)
                 .HasForeignKey(d => d.order_id)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("order_items_order_id_fkey");
+
+            entity.HasOne(d => d.product_type).WithMany(p => p.order_items)
+                .HasForeignKey(d => d.product_type_id)
+                .HasConstraintName("order_items_product_type_id_fkey");
+        });
+
+        modelBuilder.Entity<order_request>(entity =>
+        {
+            entity.HasKey(e => e.order_request_id).HasName("order_request_pkey");
+
+            entity.ToTable("order_request", "AMMS_DB");
+
+            entity.Property(e => e.customer_email).HasMaxLength(100);
+            entity.Property(e => e.customer_name).HasMaxLength(100);
+            entity.Property(e => e.customer_phone).HasMaxLength(20);
+            entity.Property(e => e.delivery_date).HasColumnType("timestamp without time zone");
+            entity.Property(e => e.order_request_date).HasColumnType("timestamp without time zone");
+            entity.Property(e => e.product_name).HasMaxLength(200);
+        });
+
+        modelBuilder.Entity<product_type>(entity =>
+        {
+            entity.HasKey(e => e.product_type_id).HasName("product_types_pkey");
+
+            entity.HasIndex(e => e.code, "product_types_code_key").IsUnique();
+
+            entity.Property(e => e.code).HasMaxLength(20);
+            entity.Property(e => e.is_active).HasDefaultValue(true);
+            entity.Property(e => e.name).HasMaxLength(100);
+        });
+
+        modelBuilder.Entity<product_type_process>(entity =>
+        {
+            entity.HasKey(e => e.process_id).HasName("product_type_process_pkey");
+
+            entity.ToTable("product_type_process");
+
+            entity.Property(e => e.is_active).HasDefaultValue(true);
+            entity.Property(e => e.machine).HasMaxLength(50);
+            entity.Property(e => e.process_name).HasMaxLength(100);
+
+            entity.HasOne(d => d.product_type).WithMany(p => p.product_type_processes)
+                .HasForeignKey(d => d.product_type_id)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("product_type_process_product_type_id_fkey");
         });
 
         modelBuilder.Entity<production>(entity =>
@@ -189,6 +231,10 @@ public partial class AppDbContext : DbContext
             entity.HasOne(d => d.order).WithMany(p => p.productions)
                 .HasForeignKey(d => d.order_id)
                 .HasConstraintName("productions_order_id_fkey");
+
+            entity.HasOne(d => d.product_type).WithMany(p => p.productions)
+                .HasForeignKey(d => d.product_type_id)
+                .HasConstraintName("productions_product_type_id_fkey");
         });
 
         modelBuilder.Entity<purchase>(entity =>
@@ -307,6 +353,10 @@ public partial class AppDbContext : DbContext
             entity.HasOne(d => d.assigned_toNavigation).WithMany(p => p.tasks)
                 .HasForeignKey(d => d.assigned_to)
                 .HasConstraintName("tasks_assigned_to_fkey");
+
+            entity.HasOne(d => d.process).WithMany(p => p.tasks)
+                .HasForeignKey(d => d.process_id)
+                .HasConstraintName("tasks_process_id_fkey");
 
             entity.HasOne(d => d.prod).WithMany(p => p.tasks)
                 .HasForeignKey(d => d.prod_id)

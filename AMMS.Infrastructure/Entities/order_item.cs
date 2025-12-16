@@ -9,9 +9,7 @@ public partial class order_item
 
     public int? order_id { get; set; }
 
-    public string product_name { get; set; } = null!;
-
-    public string? product_type { get; set; }
+    public string? product_name { get; set; }
 
     public int quantity { get; set; }
 
@@ -27,7 +25,11 @@ public partial class order_item
 
     public string? design_url { get; set; }
 
+    public int? product_type_id { get; set; }
+
     public virtual ICollection<bom> boms { get; set; } = new List<bom>();
 
     public virtual order? order { get; set; }
+
+    public virtual product_type? product_type { get; set; }
 }

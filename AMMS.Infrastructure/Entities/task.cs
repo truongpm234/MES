@@ -23,7 +23,11 @@ public partial class task
 
     public DateTime? end_time { get; set; }
 
+    public int? process_id { get; set; }
+
     public virtual user? assigned_toNavigation { get; set; }
+
+    public virtual product_type_process? process { get; set; }
 
     public virtual production? prod { get; set; }
 

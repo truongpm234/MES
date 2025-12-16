@@ -21,12 +21,12 @@ namespace AMMS.Application.Services
                 customer_name = req.customer_name,
                 customer_phone = req.customer_phone,
                 customer_email = req.customer_email,
-                delivery_date = DateTime.SpecifyKind(req.delivery_date, DateTimeKind.Utc),
+                delivery_date = req.delivery_date,
                 product_name = req.product_name,
                 quantity = req.quantity,
                 description = req.description,
                 design_file_path = req.design_file_path,
-                order_request_date = DateTime.UtcNow
+                order_request_date = DateTime.Now
             };
 
             await _repo.AddAsync(entity);
@@ -35,26 +35,25 @@ namespace AMMS.Application.Services
             return new CreateCustomerOrderResponse();
         }
 
-
         public async Task UpdateAsync(int id, CreateCustomerOrderResquest req)
         {
-            var entity = new order_request
-            {
-                order_request_id = id,
-                customer_name = req.customer_name,
-                customer_phone = req.customer_phone,
-                customer_email = req.customer_email,
-                delivery_date = DateTime.SpecifyKind(req.delivery_date, DateTimeKind.Utc),
-                product_name = req.product_name,
-                quantity = req.quantity,
-                description = req.description,
-                design_file_path = req.design_file_path
-            };
+            var entity = await _repo.GetByIdAsync(id);
+            if (entity == null)
+                throw new KeyNotFoundException("Order request not found");
+
+            entity.customer_name = req.customer_name;
+            entity.customer_phone = req.customer_phone;
+            entity.customer_email = req.customer_email;
+            entity.delivery_date = req.delivery_date;
+            entity.product_name = req.product_name;
+            entity.quantity = req.quantity;
+            entity.description = req.description;
+            entity.design_file_path = req.design_file_path;
+            entity.order_request_date = DateTime.Now;
 
             _repo.Update(entity);
             await _repo.SaveChangesAsync();
         }
-
 
         public async Task DeleteAsync(int id)
         {
