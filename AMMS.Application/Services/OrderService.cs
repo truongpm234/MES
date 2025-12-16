@@ -1,6 +1,6 @@
 ﻿using AMMS.Application.Interfaces;
-using AMMS.Domain;
-using AMMS.Domain.Entities;
+using AMMS.Infrastructure.Entities;
+using AMMS.Infrastructure.Repositories;
 using AMMS.Shared.DTOs.Orders;
 
 namespace AMMS.Application.Services
@@ -32,7 +32,6 @@ namespace AMMS.Application.Services
             await _repo.AddAsync(entity);
             await _repo.SaveChangesAsync();
 
-            // ✅ CHỈ TRẢ MESSAGE
             return new CreateCustomerOrderResponse();
         }
 

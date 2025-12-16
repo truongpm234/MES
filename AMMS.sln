@@ -11,8 +11,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AMMS.Infrastructure", "AMMS
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AMMS.Shared", "AMMS.Shared\AMMS.Shared.csproj", "{3D32EDCF-CB6F-41E9-AA8A-68D418D4D72B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AMMS.Domain", "AMMS.Domain\AMMS.Domain.csproj", "{1378D415-FD90-B479-0381-F98C4165832A}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -71,18 +69,6 @@ Global
 		{3D32EDCF-CB6F-41E9-AA8A-68D418D4D72B}.Release|x64.Build.0 = Release|Any CPU
 		{3D32EDCF-CB6F-41E9-AA8A-68D418D4D72B}.Release|x86.ActiveCfg = Release|Any CPU
 		{3D32EDCF-CB6F-41E9-AA8A-68D418D4D72B}.Release|x86.Build.0 = Release|Any CPU
-		{1378D415-FD90-B479-0381-F98C4165832A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{1378D415-FD90-B479-0381-F98C4165832A}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{1378D415-FD90-B479-0381-F98C4165832A}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{1378D415-FD90-B479-0381-F98C4165832A}.Debug|x64.Build.0 = Debug|Any CPU
-		{1378D415-FD90-B479-0381-F98C4165832A}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{1378D415-FD90-B479-0381-F98C4165832A}.Debug|x86.Build.0 = Debug|Any CPU
-		{1378D415-FD90-B479-0381-F98C4165832A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{1378D415-FD90-B479-0381-F98C4165832A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{1378D415-FD90-B479-0381-F98C4165832A}.Release|x64.ActiveCfg = Release|Any CPU
-		{1378D415-FD90-B479-0381-F98C4165832A}.Release|x64.Build.0 = Release|Any CPU
-		{1378D415-FD90-B479-0381-F98C4165832A}.Release|x86.ActiveCfg = Release|Any CPU
-		{1378D415-FD90-B479-0381-F98C4165832A}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

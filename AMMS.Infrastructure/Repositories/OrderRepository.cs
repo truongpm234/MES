@@ -1,7 +1,5 @@
-﻿using AMMS.Domain;
-using AMMS.Infrastructure.DBContext;
-using DomainEntity = AMMS.Domain.Entities.order_request;
-using InfraEntity = AMMS.Infrastructure.Entities.order_request;
+﻿using AMMS.Infrastructure.DBContext;
+using AMMS.Infrastructure.Entities;
 
 namespace AMMS.Infrastructure.Repositories
 {
@@ -14,36 +12,33 @@ namespace AMMS.Infrastructure.Repositories
             _db = db;
         }
 
-        public async Task AddAsync(DomainEntity entity)
+        public async Task AddAsync(order_request entity)
         {
-            await _db.order_requests.AddAsync(ToInfra(entity));
+            await _db.order_requests.AddAsync(entity);
         }
 
-        public void Update(DomainEntity entity)
+        public void Update(order_request entity)
         {
-            _db.order_requests.Update(ToInfra(entity));
+            _db.order_requests.Update(entity);
+        }
+
+        public async Task<order_request?> GetByIdAsync(int id)
+        {
+            return await _db.order_requests.FindAsync(id);
         }
 
         public async Task DeleteAsync(int id)
         {
-            var infra = await _db.order_requests.FindAsync(id);
-            if (infra != null) _db.order_requests.Remove(infra);
+            var request = await GetByIdAsync(id);
+            if (request != null)
+            {
+                _db.order_requests.Remove(request);
+            }
         }
 
-        public Task<int> SaveChangesAsync() => _db.SaveChangesAsync();
-
-        private static InfraEntity ToInfra(DomainEntity d) => new()
+        public async Task<int> SaveChangesAsync()
         {
-            order_request_id = d.order_request_id,
-            customer_name = d.customer_name,
-            customer_phone = d.customer_phone,
-            customer_email = d.customer_email,
-            delivery_date = d.delivery_date,
-            product_name = d.product_name,
-            quantity = d.quantity,
-            description = d.description,
-            design_file_path = d.design_file_path,
-            order_request_date = d.order_request_date
-        };
+            return await _db.SaveChangesAsync();
+        }
     }
 }

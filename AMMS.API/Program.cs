@@ -1,6 +1,5 @@
 ﻿using AMMS.Application.Interfaces;
 using AMMS.Application.Services;
-using AMMS.Domain;
 using AMMS.Infrastructure.Repositories;
 using AMMS.Infrastructure.DBContext;
 using Microsoft.EntityFrameworkCore;
@@ -24,7 +23,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         builder.Configuration.GetConnectionString("DefaultConnection"),
         npgsqlOptions =>
         {
-            npgsqlOptions.CommandTimeout(60); // ✅ tăng timeout
+            npgsqlOptions.CommandTimeout(60);
             npgsqlOptions.EnableRetryOnFailure(
                 maxRetryCount: 5,
                 maxRetryDelay: TimeSpan.FromSeconds(10),

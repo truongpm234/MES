@@ -1,5 +1,4 @@
-﻿using AMMS.Domain.Entities;
-using AMMS.Shared.DTOs.Orders;
+﻿using AMMS.Shared.DTOs.Orders;
 
 namespace AMMS.Application.Interfaces
 {
