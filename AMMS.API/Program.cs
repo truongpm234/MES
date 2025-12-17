@@ -8,7 +8,6 @@ using AMMS.Infrastructure.Interfaces;
 using AMMS.Infrastructure.FileStorage;
 
 var builder = WebApplication.CreateBuilder(args);
-Console.WriteLine(builder.Configuration.GetConnectionString("DefaultConnection"));
 
 // Add services to the container.
 
@@ -25,7 +24,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         {
             npgsqlOptions.CommandTimeout(60);
             npgsqlOptions.EnableRetryOnFailure(
-                maxRetryCount: 5,
+                maxRetryCount: 0,
                 maxRetryDelay: TimeSpan.FromSeconds(10),
                 errorCodesToAdd: null);
         }));
@@ -40,13 +39,20 @@ builder.Services.AddScoped<ICloudinaryFileStorageService, CloudinaryFileStorageS
 builder.Services.AddScoped<IRequestService, RequestService>();
 builder.Services.AddScoped<IRequestRepository, RequestRepository>();
 
+
+builder.Services.AddControllers()
+    .AddJsonOptions(x =>
+        x.JsonSerializerOptions.ReferenceHandler =
+            System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles);
+
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "AMMS API V1");
+});
+
 app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
