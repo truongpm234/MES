@@ -1,4 +1,5 @@
 ﻿using AMMS.Infrastructure.Entities;
+using AMMS.Shared.DTOs.Common;
 using AMMS.Shared.DTOs.Orders;
 
 namespace AMMS.Application.Interfaces
@@ -9,5 +10,6 @@ namespace AMMS.Application.Interfaces
         Task<UpdateOrderRequestResponse> UpdateAsync(int id, UpdateOrderRequest req);
         Task DeleteAsync(int id);
         Task<order_request?> GetByIdAsync(int id);
+        Task<PagedResultLite<order_request>> GetPagedAsync(int page, int pageSize);
     }
 }

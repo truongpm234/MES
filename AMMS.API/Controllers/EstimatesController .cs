@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AMMS.API.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/estimates")]
     [ApiController]
     public class EstimatesController : ControllerBase
     {

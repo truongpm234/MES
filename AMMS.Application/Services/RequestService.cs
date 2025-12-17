@@ -1,6 +1,7 @@
 ﻿using AMMS.Application.Interfaces;
 using AMMS.Infrastructure.Entities;
 using AMMS.Infrastructure.Interfaces;
+using AMMS.Shared.DTOs.Common;
 using AMMS.Shared.DTOs.Orders;
 
 namespace AMMS.Application.Services
@@ -96,7 +97,28 @@ namespace AMMS.Application.Services
             await _repo.DeleteAsync(id);
             await _repo.SaveChangesAsync();
         }
-        public Task<order_request?> GetByIdAsync(int id)
-            => _repo.GetByIdAsync(id);
+        public Task<order_request?> GetByIdAsync(int id) => _repo.GetByIdAsync(id);
+        public async Task<PagedResultLite<order_request>> GetPagedAsync(int page, int pageSize)
+        {
+            if (page <= 0) page = 1;
+            if (pageSize <= 0) pageSize = 10;
+
+            var skip = (page - 1) * pageSize;
+
+            // lấy dư 1 record để biết có trang sau
+            var list = await _repo.GetPagedAsync(skip, pageSize + 1);
+
+            var hasNext = list.Count > pageSize;
+            var items = list.Take(pageSize).ToList();
+
+            return new PagedResultLite<order_request>
+            {
+                Page = page,
+                PageSize = pageSize,
+                HasNext = hasNext,
+                Items = items
+            };
+        }
+
     }
 }
