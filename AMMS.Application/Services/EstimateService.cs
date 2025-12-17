@@ -4,12 +4,12 @@ using AMMS.Shared.DTOs.Estimates;
 
 namespace AMMS.Application.Services
 {
-    public class PaperEstimateService : IEstimateService
+    public class EstimateService : IEstimateService
     {
         private readonly IMaterialRepository _materialRepo;
         private const decimal DEFAULT_WASTE_PERCENT = 5m;
 
-        public PaperEstimateService(IMaterialRepository materialRepo) => _materialRepo = materialRepo;
+        public EstimateService(IMaterialRepository materialRepo) => _materialRepo = materialRepo;
 
         public async Task<PaperEstimateResponse> EstimatePaperAsync(PaperEstimateRequest req)
         {

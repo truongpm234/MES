@@ -9,9 +9,9 @@ namespace AMMS.API.Controllers
     [Route("api/[controller]")]
     public class EstimatesController : ControllerBase
     {
-        private readonly IPaperEstimateService _service;
+        private readonly IEstimateService _service;
 
-        public EstimatesController(IPaperEstimateService service)
+        public EstimatesController(IEstimateService service)
         {
             _service = service;
         }
