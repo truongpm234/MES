@@ -1,4 +1,5 @@
-﻿using AMMS.Shared.DTOs.Orders;
+﻿using AMMS.Infrastructure.Entities;
+using AMMS.Shared.DTOs.Orders;
 
 namespace AMMS.Application.Interfaces
 {
@@ -7,5 +8,6 @@ namespace AMMS.Application.Interfaces
         Task<CreateCustomerOrderResponse> CreateAsync(CreateCustomerOrderResquest req);
         //Task UpdateAsync(int id, CreateCustomerOrderResquest req);
         //Task DeleteAsync(int id);
+        Task<order_request?> GetByIdAsync(int id);
     }
 }
