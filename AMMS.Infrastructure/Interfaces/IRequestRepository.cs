@@ -1,5 +1,9 @@
 ﻿using AMMS.Infrastructure.Entities;
+<<<<<<< HEAD
+using AMMS.Shared.DTOs.Common;
+=======
 using Microsoft.EntityFrameworkCore;
+>>>>>>> main
 
 namespace AMMS.Infrastructure.Interfaces
 {
@@ -11,5 +15,7 @@ namespace AMMS.Infrastructure.Interfaces
         Task<order_request?> GetByIdAsync(int id);
         Task DeleteAsync(int id);
         Task<int> SaveChangesAsync();
+        Task<int> CountAsync();
+        Task<List<order_request>> GetPagedAsync(int skip, int take);
     }
 }
