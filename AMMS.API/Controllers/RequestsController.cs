@@ -1,7 +1,9 @@
 ﻿using AMMS.Application.Interfaces;
 using AMMS.Application.Services;
+using AMMS.Infrastructure.Entities;
 using AMMS.Infrastructure.Interfaces;
 using AMMS.Infrastructure.Repositories;
+using AMMS.Shared.DTOs.Common;
 using AMMS.Shared.DTOs.Orders;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
@@ -9,7 +11,7 @@ using System.Text.Json;
 namespace AMMS.API.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/requests")]
     public class RequestsController : ControllerBase
     {
         private readonly IRequestService _service;
@@ -52,5 +54,12 @@ namespace AMMS.API.Controllers
 
             return Ok(order);
         }
+        [HttpGet("paged")]
+        public async Task<IActionResult> GetPaged([FromQuery] int page, [FromQuery] int pageSize)
+        {
+            var result = await _service.GetPagedAsync(page, pageSize);
+            return Ok(result);
+        }
+
     }
 }

@@ -1,6 +1,7 @@
 ﻿using AMMS.Infrastructure.DBContext;
 using AMMS.Infrastructure.Entities;
 using AMMS.Infrastructure.Interfaces;
+using AMMS.Shared.DTOs.Common;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
@@ -47,6 +48,19 @@ namespace AMMS.Infrastructure.Repositories
                 _db.order_requests.Remove(entity);
             }
         }
-    }
+        public Task<int> CountAsync()
+        {
+            return _db.order_requests.AsNoTracking().CountAsync();
+        }
 
-}
+        public Task<List<order_request>> GetPagedAsync(int skip, int takePlusOne)
+        {
+            return _db.order_requests
+                .AsNoTracking()
+                .OrderByDescending(x => x.order_request_date)
+                .Skip(skip)
+                .Take(takePlusOne)
+                .ToListAsync();
+        }
+    }
+    }
