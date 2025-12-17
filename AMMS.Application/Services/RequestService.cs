@@ -36,7 +36,8 @@ namespace AMMS.Application.Services
                 order_request_date = ToUnspecified(req.order_request_date),
                 province = req.province,
                 district = req.district,
-                detail_address = req.detail_address
+                detail_address = req.detail_address,
+                processing_status = "Pending"
             };
 
             await _repo.AddAsync(entity);
@@ -69,11 +70,9 @@ namespace AMMS.Application.Services
             entity.province = req.province ?? entity.province;
             entity.district = req.district ?? entity.district;
             entity.detail_address = req.detail_address ?? entity.detail_address;
-
             entity.delivery_date = ToUnspecified(req.delivery_date);
-
-
             entity.order_request_date = ToUnspecified(req.delivery_date);
+            entity.processing_status = req.processing_status ?? entity.processing_status;
             await _repo.UpdateAsync(entity);
             await _repo.SaveChangesAsync();
 

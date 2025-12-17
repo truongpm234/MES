@@ -31,5 +31,7 @@ namespace AMMS.Shared.DTOs.Orders
         public string? district { get; set; }
 
         public string? detail_address { get; set; }
+
+        public string? processing_status { get; set; }
     }
 }
