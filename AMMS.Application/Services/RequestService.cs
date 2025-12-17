@@ -64,5 +64,7 @@ namespace AMMS.Application.Services
         //    await _repo.DeleteAsync(id);
         //    await _repo.SaveChangesAsync();
         //}
+        public Task<order_request?> GetByIdAsync(int id)
+            => _repo.GetByIdAsync(id);
     }
 }

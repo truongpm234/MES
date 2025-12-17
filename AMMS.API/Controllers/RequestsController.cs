@@ -43,5 +43,14 @@ namespace AMMS.API.Controllers
         //    await _service.DeleteAsync(id);
         //    return NoContent();
         //}
+        [HttpGet("{id:int}")]
+        public async Task<IActionResult> GetById(int id)
+        {
+            var order = await _service.GetByIdAsync(id);
+            if (order == null)
+                return NotFound(new { message = "Order request not found" });
+
+            return Ok(order);
+        }
     }
 }

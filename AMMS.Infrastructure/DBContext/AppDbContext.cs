@@ -52,6 +52,7 @@ public partial class AppDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.HasDefaultSchema("AMMS_DB");
         modelBuilder.Entity<bom>(entity =>
         {
             entity.HasKey(e => e.bom_id).HasName("boms_pkey");
@@ -174,7 +175,7 @@ public partial class AppDbContext : DbContext
         {
             entity.HasKey(e => e.order_request_id).HasName("order_request_pkey");
 
-            entity.ToTable("order_request", "AMMS_DB");
+
 
             entity.Property(e => e.customer_email).HasMaxLength(100);
             entity.Property(e => e.customer_name).HasMaxLength(100);
