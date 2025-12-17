@@ -92,16 +92,6 @@ namespace AMMS.Application.Services
             await _repo.DeleteAsync(id);
             await _repo.SaveChangesAsync();
         }
-            try
-            {
-                await _repo.DeleteAsync(id);
-                await _repo.SaveChangesAsync();
-            }
-            catch
-            {
-                throw;
-            }
-        }
         public Task<order_request?> GetByIdAsync(int id) => _repo.GetByIdAsync(id);
         public async Task<PagedResultLite<order_request>> GetPagedAsync(int page, int pageSize)
         {
