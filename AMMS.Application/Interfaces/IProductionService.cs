@@ -9,7 +9,6 @@ namespace AMMS.Application.Interfaces
 {
     public interface IProductionService
     {
-        Task<List<ProductionOrderDto>> GetOrdersInProductionAsync();
         Task<NearestDeliveryResponse> GetNearestDeliveryAsync();
     }
 }

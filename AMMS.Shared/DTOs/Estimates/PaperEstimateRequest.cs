@@ -11,7 +11,7 @@
         public int height_mm { get; set; }  // Cao
 
         // tuỳ chỉnh
-        public int allowance_mm { get; set; } = 10; // chừa gấp/dán
-        public int bleed_mm { get; set; } = 3;      // chừa xén
+        public int allowance_mm { get; set; } = 5; // chừa gấp/dán
+        public int bleed_mm { get; set; } = 1;      // chừa xén
     }
 }

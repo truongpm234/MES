@@ -10,5 +10,6 @@ namespace AMMS.Application.Interfaces
     public interface IEstimateService
     {
         Task<PaperEstimateResponse> EstimatePaperAsync(PaperEstimateRequest req);
+        Task<CostEstimateResponse> CalculateCostEstimateAsync(CostEstimateRequest req);
     }
 }

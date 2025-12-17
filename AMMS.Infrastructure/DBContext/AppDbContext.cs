@@ -51,6 +51,8 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<user> users { get; set; }
 
+    public virtual DbSet<cost_estimate> cost_estimates { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema("AMMS_DB");
@@ -121,6 +123,7 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.unit).HasMaxLength(20);
             entity.Property(e => e.sheet_width_mm);
             entity.Property(e => e.sheet_height_mm);
+            entity.Property(e => e.sheet_length_mm);
         });
 
         modelBuilder.Entity<order>(entity =>
@@ -410,6 +413,34 @@ public partial class AppDbContext : DbContext
             entity.HasOne(d => d.role).WithMany(p => p.users)
                 .HasForeignKey(d => d.role_id)
                 .HasConstraintName("users_role_id_fkey");
+        });
+
+        modelBuilder.Entity<cost_estimate>(entity =>
+        {
+            entity.HasKey(e => e.estimate_id).HasName("cost_estimate_pkey");
+
+            entity.ToTable("cost_estimate", "AMMS_DB");
+
+            entity.Property(e => e.base_cost).HasPrecision(15, 2);
+            entity.Property(e => e.rush_percent).HasPrecision(5, 2);
+            entity.Property(e => e.rush_amount).HasPrecision(15, 2);
+            entity.Property(e => e.system_total_cost).HasPrecision(15, 2);
+
+            entity.Property(e => e.created_at)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasColumnType("timestamp without time zone");
+
+            entity.Property(e => e.estimated_finish_date)
+                .HasColumnType("timestamp without time zone");
+
+            entity.Property(e => e.desired_delivery_date)
+                .HasColumnType("timestamp without time zone");
+
+            entity.HasOne(d => d.order_request)
+                .WithMany()
+                .HasForeignKey(d => d.order_request_id)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_cost_estimate_order_request");
         });
 
         OnModelCreatingPartial(modelBuilder);

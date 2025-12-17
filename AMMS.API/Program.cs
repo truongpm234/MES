@@ -65,6 +65,7 @@ builder.Services.AddScoped<IMaterialRepository, MaterialRepository>();
 builder.Services.AddScoped<IEstimateService, EstimateService>();
 builder.Services.AddScoped<IProductionService, ProductionService>();
 builder.Services.AddScoped<IProductionRepository, ProductionRepository>();
+builder.Services.AddScoped<ICostEstimateRepository, CostEstimateRepository>();
 
 // Logging
 builder.Logging.ClearProviders();

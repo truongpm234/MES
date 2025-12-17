@@ -23,5 +23,12 @@ namespace AMMS.API.Controllers
             var result = await _service.EstimatePaperAsync(req);
             return Ok(result);
         }
+
+        [HttpPost("cost")]
+        public async Task<IActionResult> CalculateCost([FromBody] CostEstimateRequest req)
+        {
+            var result = await _service.CalculateCostEstimateAsync(req);
+            return Ok(result);
+        }
     }
 }

@@ -17,21 +17,6 @@ namespace AMMS.Application.Services
         {
             _repo = repo;
         }
-
-        public async Task<List<ProductionOrderDto>> GetOrdersInProductionAsync()
-        {
-            var productions = await _repo.GetProductionsInProgressAsync();
-
-            return productions.Select(p => new ProductionOrderDto
-            {
-                order_id = p.order!.order_id,
-                customer_name = p.order!.customer?.contact_name,
-                quantity = p.order!.order_items.Sum(i => i.quantity),
-                delivery_date = p.order!.delivery_date,
-                production_status = p.status
-            }).ToList();
-        }
-
         public async Task<NearestDeliveryResponse> GetNearestDeliveryAsync()
         {
             var nearestDate = await _repo.GetNearestDeliveryDateAsync();

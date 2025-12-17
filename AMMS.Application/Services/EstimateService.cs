@@ -1,4 +1,5 @@
 ﻿using AMMS.Application.Interfaces;
+using AMMS.Infrastructure.Entities;
 using AMMS.Infrastructure.Interfaces;
 using AMMS.Shared.DTOs.Estimates;
 
@@ -7,9 +8,15 @@ namespace AMMS.Application.Services
     public class EstimateService : IEstimateService
     {
         private readonly IMaterialRepository _materialRepo;
+        private readonly ICostEstimateRepository _estimateRepo;
+
         private const decimal DEFAULT_WASTE_PERCENT = 5m;
 
-        public EstimateService(IMaterialRepository materialRepo) => _materialRepo = materialRepo;
+        public EstimateService(IMaterialRepository materialRepo, ICostEstimateRepository costEstimateRepository)
+        {
+            _materialRepo = materialRepo;
+            _estimateRepo = costEstimateRepository;
+        }
 
         public async Task<PaperEstimateResponse> EstimatePaperAsync(PaperEstimateRequest req)
         {
@@ -19,8 +26,8 @@ namespace AMMS.Application.Services
             if (req.quantity <= 0)
                 throw new ArgumentException("quantity must be > 0");
 
-            if (req.length_mm <= 0 || req.width_mm <= 0 || req.height_mm <= 0)
-                throw new ArgumentException("length_mm/width_mm/height_mm must be > 0");
+            if (req.length_mm < 0 || req.width_mm < 0 || req.height_mm < 0)
+                throw new ArgumentException("length_mm/width_mm/height_mm must be >= 0");
 
             if (req.allowance_mm < 0 || req.bleed_mm < 0)
                 throw new ArgumentException("allowance_mm/bleed_mm must be >= 0");
@@ -28,43 +35,138 @@ namespace AMMS.Application.Services
             var paper = await _materialRepo.GetByCodeAsync(req.paper_code)
                        ?? throw new KeyNotFoundException($"Paper not found: {req.paper_code}");
 
-            if (paper.sheet_width_mm is null || paper.sheet_height_mm is null)
-                throw new InvalidOperationException("Missing sheet size in materials (sheet_width_mm/sheet_height_mm).");
+            if (paper.sheet_width_mm is null || paper.sheet_height_mm is null || paper.sheet_length_mm is null)
+                throw new InvalidOperationException("Missing sheet size in materials (sheet_width_mm/sheet_height_mm/sheet_length_mm).");
 
             int sheetW = paper.sheet_width_mm.Value;
             int sheetH = paper.sheet_height_mm.Value;
+            int sheetL = paper.sheet_length_mm.Value;
 
-            // print size (hộp cơ bản)
+            // print size (hộp cơ bản - mặt trải phẳng của hộp)
+            // Chiều rộng in = (chiều dài hộp + chiều rộng hộp) × 2 + chừa gấp + chừa xén 2 bên
             int printW = 2 * (req.length_mm + req.width_mm) + req.allowance_mm + 2 * req.bleed_mm;
+
+            // Chiều cao in = chiều cao hộp + chiều rộng hộp + chừa gấp + chừa xén 2 bên
             int printH = (req.height_mm + req.width_mm) + req.allowance_mm + 2 * req.bleed_mm;
 
-            bool fitNormal = printW <= sheetW && printH <= sheetH;
-            bool fitRotate = printH <= sheetW && printW <= sheetH;
-            if (!fitNormal && !fitRotate)
-                throw new InvalidOperationException("Print size is larger than paper sheet in both orientations.");
+            // Chiều dài in = chiều dài hộp (cho trường hợp tính toán 3D)
+            // Với hộp, chiều dài in có thể là phần nắp hộp hoặc phần mở rộng khác
+            int printL = req.length_mm + req.allowance_mm + 2 * req.bleed_mm;
 
-            int n1 = (sheetW / printW) * (sheetH / printH);
-            int n2 = (sheetW / printH) * (sheetH / printW);
-            int nUp = Math.Max(Math.Max(n1, n2), 1);
+            bool fitWH = printW <= sheetW && printH <= sheetH;
+            bool fitHW = printH <= sheetW && printW <= sheetH;
+            bool fitWL = printW <= sheetW && printL <= sheetL;
+            bool fitLW = printL <= sheetW && printW <= sheetL;
+            bool fitHL = printH <= sheetW && printL <= sheetL;
+            bool fitLH = printL <= sheetW && printH <= sheetL;
 
+            if (!fitWH && !fitHW && !fitWL && !fitLW && !fitHL && !fitLH)
+                throw new InvalidOperationException(
+                    "Print size does not fit paper in any orientation (W×H, H×W, W×L, L×W, H×L, L×H).");
+
+            // ================== N-up calculation ==================
+            int n_wh = fitWH ? (sheetW / printW) * (sheetH / printH) : 0;
+            int n_hw = fitHW ? (sheetW / printH) * (sheetH / printW) : 0;
+
+            // Tính theo chiều dài giấy (cuộn / nối)
+            int n_wl = fitWL ? (sheetW / printW) * (sheetL / printL) : 0;
+            int n_lw = fitLW ? (sheetW / printL) * (sheetL / printW) : 0;
+            int n_hl = fitHL ? (sheetW / printH) * (sheetL / printL) : 0;
+            int n_lh = fitLH ? (sheetW / printL) * (sheetL / printH) : 0;
+
+            int nUp = Math.Max(
+                        Math.Max(n_wh, n_hw),
+                        Math.Max(Math.Max(n_wl, n_lw), Math.Max(n_hl, n_lh))
+                      );
+
+            if (nUp <= 0)
+                nUp = 1;
+
+            // ================== Sheet count ==================
             int sheetsBase = (int)Math.Ceiling(req.quantity / (decimal)nUp);
 
-            // ✅ luôn 5%
+            // ================== Waste ==================
             var waste = DEFAULT_WASTE_PERCENT;
-            int sheetsWithWaste = (int)Math.Ceiling(sheetsBase * (1m + waste / 100m));
+            int sheetsWithWaste =
+                (int)Math.Ceiling(sheetsBase * (1m + waste / 100m));
 
             return new PaperEstimateResponse
             {
                 paper_code = paper.code,
                 sheet_width_mm = sheetW,
                 sheet_height_mm = sheetH,
+                sheet_length_mm = sheetL,
                 print_width_mm = printW,
                 print_height_mm = printH,
+                print_length_mm = printL, // Đã được tính toán
                 n_up = nUp,
                 quantity = req.quantity,
                 sheets_base = sheetsBase,
                 sheets_with_waste = sheetsWithWaste,
                 waste_percent = waste
+            };
+        }
+
+        public async Task<CostEstimateResponse> CalculateCostEstimateAsync(CostEstimateRequest req)
+        {
+            // 1️⃣ Lấy vật liệu
+            var paper = await _materialRepo.GetByCodeAsync(req.paper.paper_code)
+                ?? throw new Exception("Paper not found");
+
+            if (paper.cost_price == null)
+                throw new Exception("Paper cost_price missing");
+
+            // 2️⃣ Giá giấy
+            decimal paperCost =
+                req.paper.sheets_with_waste * paper.cost_price.Value;
+
+            // 3️⃣ Khấu hao + NVL khác (10%)
+            decimal depreciation = paperCost * 0.10m;
+            decimal baseCost = paperCost + depreciation;
+
+            // 4️⃣ Ngày hoàn thành dự kiến
+            var now = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
+            var estimatedFinish = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(5), DateTimeKind.Unspecified);
+
+            // 5️⃣ Rush?
+            bool isRush = req.desired_delivery_date < estimatedFinish;
+
+            decimal rushPercent = 0;
+            if (isRush)
+            {
+                if (baseCost < 1_000_000)
+                    rushPercent = 10;
+                else if (baseCost >= 1_000_000)
+                    rushPercent = 5;
+            }
+
+            decimal rushAmount = baseCost * rushPercent / 100;
+            decimal total = baseCost + rushAmount;
+
+            var entity = new cost_estimate
+            {
+                created_at = now,
+                estimated_finish_date = estimatedFinish,
+                desired_delivery_date = DateTime.SpecifyKind(req.desired_delivery_date, DateTimeKind.Unspecified),
+                base_cost = baseCost,
+                is_rush = isRush,
+                rush_percent = rushPercent,
+                rush_amount = rushAmount,
+                system_total_cost = total,
+                order_request_id = req.order_request_id
+            };
+
+            await _estimateRepo.AddAsync(entity);
+            await _estimateRepo.SaveChangesAsync();
+
+            return new CostEstimateResponse
+            {
+                base_cost = baseCost,
+                is_rush = isRush,
+                rush_percent = rushPercent,
+                rush_amount = rushAmount,
+                system_total_cost = total,
+                estimated_finish_date = estimatedFinish
             };
         }
     }

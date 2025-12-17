@@ -18,24 +18,6 @@ namespace AMMS.Infrastructure.Repositories
         {
             _db = db;
         }
-
-        /// <summary>
-        /// Danh sách đơn đang sản xuất tại xưởng
-        /// </summary>
-        public async Task<List<production>> GetProductionsInProgressAsync()
-        {
-            return await _db.productions
-                .AsNoTracking()
-                .Include(p => p.order)
-                .Where(p =>
-                    EF.Functions.ILike(p.status!, "scheduled") ||
-                    EF.Functions.ILike(p.status!, "in_production")
-                )
-                .OrderBy(p => p.order!.delivery_date)
-                .ToListAsync();
-        }
-
-
         /// <summary>
         /// Ngày giao gần nhất của các đơn đang sản xuất
         /// </summary>

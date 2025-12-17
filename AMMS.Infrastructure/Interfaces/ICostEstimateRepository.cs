@@ -7,8 +7,10 @@ using System.Threading.Tasks;
 
 namespace AMMS.Infrastructure.Interfaces
 {
-    public interface IProductionRepository
+    public interface ICostEstimateRepository
     {
-        Task<DateTime?> GetNearestDeliveryDateAsync();
+        Task AddAsync(cost_estimate entity);
+        Task SaveChangesAsync();
     }
 }
+

@@ -13,17 +13,6 @@ namespace AMMS.API.Controllers
         {
             _service = service;
         }
-
-        /// <summary>
-        /// Danh sách đơn đang sản xuất
-        /// </summary>
-        [HttpGet("in-production")]
-        public async Task<IActionResult> GetInProduction()
-        {
-            var result = await _service.GetOrdersInProductionAsync();
-            return Ok(result);
-        }
-
         /// <summary>
         /// Ngày giao gần nhất (để tính xưởng rảnh)
         /// </summary>
