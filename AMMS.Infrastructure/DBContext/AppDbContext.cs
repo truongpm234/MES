@@ -83,6 +83,7 @@ public partial class AppDbContext : DbContext
 }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.HasDefaultSchema("AMMS_DB");
         modelBuilder.Entity<bom>(entity =>
         {
             entity.HasKey(e => e.bom_id).HasName("boms_pkey");

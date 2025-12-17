@@ -32,7 +32,7 @@ namespace AMMS.API.Controllers
         [ProducesResponseType(typeof(UpdateOrderRequestResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(UpdateOrderRequestResponse), StatusCodes.Status404NotFound)]
         public async Task<ActionResult<UpdateOrderRequestResponse>> UpdateAsync(int id, [FromBody] UpdateOrderRequest request)
-        {  
+        {
             var update = await _service.UpdateAsync(id, request);
             return StatusCode(StatusCodes.Status200OK, update);
         }
@@ -41,7 +41,17 @@ namespace AMMS.API.Controllers
         public async Task<IActionResult> Delete(int id)
         {
             await _service.DeleteAsync(id);
-            return NoContent();
+            return NoContent();           
+        }
+
+        [HttpGet("{id:int}")]
+        public async Task<IActionResult> GetById(int id)
+        {
+            var order = await _service.GetByIdAsync(id);
+            if (order == null)
+                return NotFound(new { message = "Order request not found" });
+
+            return Ok(order);
         }
     }
 }

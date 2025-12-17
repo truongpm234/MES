@@ -60,6 +60,10 @@ builder.Services.AddScoped<IUploadFileService, UploadFileService>();
 builder.Services.AddScoped<ICloudinaryFileStorageService, CloudinaryFileStorageService>();
 builder.Services.AddScoped<IRequestService, RequestService>();
 builder.Services.AddScoped<IRequestRepository, RequestRepository>();
+builder.Services.AddScoped<IEstimateRepository, EstimateRepository>();
+builder.Services.AddScoped<IEstimateService, EstimateService>();
+builder.Services.AddScoped<IProductionService, ProductionService>();
+builder.Services.AddScoped<IProductionRepository, ProductionRepository>();
 
 // Logging
 builder.Logging.ClearProviders();
