@@ -193,7 +193,6 @@ public partial class AppDbContext : DbContext
         modelBuilder.Entity<order_request>(entity =>
         {
             entity.HasKey(e => e.order_request_id).HasName("order_request_pkey");
-            entity.ToTable("order_request", "AMMS_DB");
 
             entity.Property(e => e.customer_email).HasMaxLength(100);
             entity.Property(e => e.customer_name).HasMaxLength(100);
@@ -203,6 +202,12 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.order_request_date).HasColumnType("timestamp without time zone");
 
             entity.Property(e => e.product_name).HasMaxLength(200);
+            entity.Property(e => e.order_id);
+            entity.HasOne(d => d.order)
+      .WithMany()                 
+      .HasForeignKey(d => d.order_id)
+      .OnDelete(DeleteBehavior.SetNull)
+      .HasConstraintName("fk_order_request_order");
         });
 
         modelBuilder.Entity<product_type>(entity =>

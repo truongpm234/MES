@@ -32,7 +32,7 @@ public partial class order_request
     
     public string? detail_address { get; set; }
 
-    public string process_status { get; set; }
+    public string? process_status { get; set; }
 
     // Loại sản phẩm in (để xác định hao hụt in)
     // "GACH_1MAU", "GACH_XUAT_KHAU_DON_GIAN", "GACH_XUAT_KHAU_TERACON", 
@@ -52,5 +52,9 @@ public partial class order_request
 
     // Có cán màng không
     public bool has_lamination { get; set; }
+
+    public int? order_id { get; set; }
+
+    public virtual order? order { get; set; }
 
 }
