@@ -1,4 +1,6 @@
-﻿namespace AMMS.Shared.DTOs.Estimates
+﻿using AMMS.Shared.DTOs.Enums;
+
+namespace AMMS.Shared.DTOs.Estimates
 {
     public class PaperEstimateRequest
     {
@@ -25,6 +27,6 @@
         public string production_processes { get; set; } = "IN";
 
         // Loại phủ
-        public string coating_type { get; set; } = "NONE"; // "KEO_NUOC", "KEO_DAU", "NONE"
+        public string coating_type { get; set; } = CoatingType.NONE.ToString(); // "KEO_NUOC", "KEO_DAU", "NONE"
     }
 }

@@ -104,7 +104,7 @@ namespace AMMS.Application.Services
 
             // TÍNH HAO HỤT THEO TỪNG CÔNG ĐOẠN
             var productType = ParseEnum<ProductTypeCode>(req.product_type, "product_type");
-            var coatingType = ParseEnum<CoatingType>(req.coating_type ?? "NONE", "coating_type");
+            var coatingType = ParseEnum<CoatingType>(req.coating_type ?? CoatingType.NONE.ToString(), "coating_type");
 
             var processes = req.production_processes.Split(',', StringSplitOptions.RemoveEmptyEntries)
                 .Select(p => ParseEnum<ProcessType>(p.Trim(), "process"))
