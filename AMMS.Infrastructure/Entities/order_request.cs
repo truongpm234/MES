@@ -32,6 +32,6 @@ public partial class order_request
     
     public string? detail_address { get; set; } 
 
-    public string processing_status { get; set; } 
+    public string process_status { get; set; } 
 
 }
