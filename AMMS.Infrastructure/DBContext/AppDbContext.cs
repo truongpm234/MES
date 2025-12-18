@@ -199,7 +199,7 @@ public partial class AppDbContext : DbContext
 
             entity.HasIndex(e => e.code, "product_types_code_key").IsUnique();
 
-            entity.Property(e => e.code).HasMaxLength(20);
+            entity.Property(e => e.code).HasMaxLength(50);
             entity.Property(e => e.is_active).HasDefaultValue(true);
             entity.Property(e => e.name).HasMaxLength(100);
         });

@@ -10,5 +10,9 @@ namespace AMMS.Infrastructure.Interfaces
     public interface IMaterialRepository
     {
         Task<material?> GetByCodeAsync(string code);
+        Task<List<material>> GetAll();
+        Task<material> GetByIdAsync(int id);
+        Task UpdateAsync(material entity);
+        Task SaveChangeAsync();
     }
 }
