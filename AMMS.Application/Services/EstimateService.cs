@@ -109,64 +109,87 @@ namespace AMMS.Application.Services
 
         public async Task<CostEstimateResponse> CalculateCostEstimateAsync(CostEstimateRequest req)
         {
+            // Validate input
+            if (req.paper == null)
+                throw new ArgumentException("Paper information is required");
+
+            if (req.paper.sheets_with_waste <= 0)
+                throw new ArgumentException("Sheets with waste must be greater than 0");
+
             // 1️⃣ Lấy vật liệu
             var paper = await _materialRepo.GetByCodeAsync(req.paper.paper_code)
-                ?? throw new Exception("Paper not found");
+                ?? throw new KeyNotFoundException($"Paper not found: {req.paper.paper_code}");
 
             if (paper.cost_price == null)
-                throw new Exception("Paper cost_price missing");
+                throw new InvalidOperationException($"Paper cost_price missing for {paper.code}");
 
-            // 2️⃣ Giá giấy
-            decimal paperCost =
-                req.paper.sheets_with_waste * paper.cost_price.Value;
+            // 2️⃣ Tính giá giấy (đơn vị: VND)
+            decimal paperCostPerSheet = paper.cost_price.Value;
+            decimal totalPaperCost = req.paper.sheets_with_waste * paperCostPerSheet;
 
-            // 3️⃣ Khấu hao + NVL khác (10%)
-            decimal depreciation = paperCost * 0.10m;
-            decimal baseCost = paperCost + depreciation;
+            // 3️⃣ Khấu hao máy móc + NVL khác (10%)
+            decimal depreciationAndOther = totalPaperCost * 0.10m;
+            decimal baseCost = totalPaperCost + depreciationAndOther;
 
-            // 4️⃣ Ngày hoàn thành dự kiến
-            var now = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
-            var estimatedFinish = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(5), DateTimeKind.Unspecified);
+            // 4️⃣ Ngày hoàn thành dự kiến (5 ngày làm việc)
+            var now = DateTime.UtcNow;
+            var estimatedFinish = now.AddDays(5);
 
-            // 5️⃣ Rush?
-            bool isRush = req.desired_delivery_date < estimatedFinish;
-
+            // 5️⃣ Xác định có phải rush hay không
+            bool isRush = false;
             decimal rushPercent = 0;
-            if (isRush)
+
+            if (req.desired_delivery_date < estimatedFinish)
             {
-                if (baseCost < 1_000_000)
-                    rushPercent = 10;
-                else if (baseCost >= 1_000_000)
-                    rushPercent = 5;
+                TimeSpan timeDifference = estimatedFinish - req.desired_delivery_date;
+                int daysDifference = (int)timeDifference.TotalDays;
+
+                // Nếu cần giao sớm hơn 3 ngày so với dự kiến thì tính là rush
+                if (daysDifference >= 3)
+                {
+                    isRush = true;
+
+                    // Tính % rush theo baseCost
+                    if (baseCost < 500_000) // Dưới 500k
+                        rushPercent = 15;
+                    else if (baseCost < 1_000_000) // Từ 500k đến dưới 1 triệu
+                        rushPercent = 10;
+                    else if (baseCost < 5_000_000) // Từ 1 triệu đến dưới 5 triệu
+                        rushPercent = 8;
+                    else // Trên 5 triệu
+                        rushPercent = 5;
+                }
             }
 
             decimal rushAmount = baseCost * rushPercent / 100;
-            decimal total = baseCost + rushAmount;
+            decimal systemTotalCost = baseCost + rushAmount;
 
+            // 6️⃣ Chuyển tất cả DateTime về Unspecified cho PostgreSQL
             var entity = new cost_estimate
             {
-                created_at = now,
-                estimated_finish_date = estimatedFinish,
-                desired_delivery_date = DateTime.SpecifyKind(req.desired_delivery_date, DateTimeKind.Unspecified),
-                base_cost = baseCost,
+                order_request_id = req.order_request_id,
+                base_cost = Math.Round(baseCost, 2),
                 is_rush = isRush,
                 rush_percent = rushPercent,
-                rush_amount = rushAmount,
-                system_total_cost = total,
-                order_request_id = req.order_request_id
+                rush_amount = Math.Round(rushAmount, 2),
+                system_total_cost = Math.Round(systemTotalCost, 2),
+                estimated_finish_date = DateTime.SpecifyKind(estimatedFinish, DateTimeKind.Unspecified),
+                desired_delivery_date = DateTime.SpecifyKind(req.desired_delivery_date, DateTimeKind.Unspecified),
+                created_at = DateTime.SpecifyKind(now, DateTimeKind.Unspecified)
             };
 
             await _estimateRepo.AddAsync(entity);
             await _estimateRepo.SaveChangesAsync();
 
+            // 7️⃣ Trả response - vẫn giữ UTC cho client
             return new CostEstimateResponse
             {
-                base_cost = baseCost,
+                base_cost = Math.Round(baseCost, 2),
                 is_rush = isRush,
                 rush_percent = rushPercent,
-                rush_amount = rushAmount,
-                system_total_cost = total,
-                estimated_finish_date = estimatedFinish
+                rush_amount = Math.Round(rushAmount, 2),
+                system_total_cost = Math.Round(systemTotalCost, 2),
+                estimated_finish_date = DateTime.SpecifyKind(estimatedFinish, DateTimeKind.Utc)
             };
         }
     }
