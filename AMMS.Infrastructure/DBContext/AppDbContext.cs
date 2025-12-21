@@ -109,7 +109,6 @@ public partial class AppDbContext : DbContext
 
         modelBuilder.Entity<material>(entity =>
         {
-            entity.ToTable("materials", "AMMS_DB");
             entity.HasKey(e => e.material_id).HasName("materials_pkey");
             entity.HasIndex(e => e.code, "materials_code_key").IsUnique();
             entity.Property(e => e.code).HasMaxLength(50);

@@ -1,5 +1,6 @@
 ﻿using AMMS.Infrastructure.Entities;
 using AMMS.Shared.DTOs.Common;
+using AMMS.Shared.DTOs.Requests;
 using Microsoft.EntityFrameworkCore;
 namespace AMMS.Infrastructure.Interfaces
 {
@@ -13,5 +14,20 @@ namespace AMMS.Infrastructure.Interfaces
         Task<int> CountAsync();
         Task<List<order_request>> GetPagedAsync(int skip, int take);
         Task<bool> AnyOrderLinkedAsync(int requestId);
+        Task<PagedResultLite<RequestSortedDto>> GetSortedByQuantityPagedAsync(
+    bool ascending, int page, int pageSize, CancellationToken ct = default);
+        Task<PagedResultLite<RequestSortedDto>> GetSortedByDatePagedAsync(
+    bool ascending, int page, int pageSize, CancellationToken ct = default);
+        Task<PagedResultLite<RequestSortedDto>> GetSortedByDeliveryDatePagedAsync(
+    bool nearestFirst, int page, int pageSize, CancellationToken ct = default);
+        Task<PagedResultLite<RequestEmailStatsDto>>GetEmailsByAcceptedCountPagedAsync(
+    int page, int pageSize, CancellationToken ct = default);
+        Task<PagedResultLite<RequestStockCoverageDto>> GetSortedByStockCoveragePagedAsync(
+    int page, int pageSize, CancellationToken ct = default);
+        Task<PagedResultLite<RequestSortedDto>> GetByOrderRequestDatePagedAsync(
+    DateOnly date, int page, int pageSize, CancellationToken ct = default);
+        Task<PagedResultLite<RequestSortedDto>> SearchPagedAsync(
+    string keyword, int page, int pageSize, CancellationToken ct = default);
+
     }
 }

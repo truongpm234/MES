@@ -106,5 +106,92 @@ namespace AMMS.API.Controllers
             await _dealService.RejectDealAsync(body.orderRequestId, body.reason);
             return Ok(new { message = "Rejected" });
         }
+
+        [HttpGet("sort-quantity/asc")]
+        public async Task<IActionResult> SortByQuantityAsc([FromQuery] int page, [FromQuery] int pageSize, CancellationToken ct)
+        {
+            var result = await _service.GetSortedByQuantityPagedAsync(true, page, pageSize, ct);
+            return Ok(result);
+        }
+
+        [HttpGet("sort-quantity/desc")]
+        public async Task<IActionResult> SortByQuantityDesc([FromQuery] int page, [FromQuery] int pageSize, CancellationToken ct)
+        {
+            var result = await _service.GetSortedByQuantityPagedAsync(false, page, pageSize, ct);
+            return Ok(result);
+        }
+
+        [HttpGet("sort-date/asc")]
+        public async Task<IActionResult> SortByDateAsc([FromQuery] int page, [FromQuery] int pageSize, CancellationToken ct)
+        {
+            var result = await _service.GetSortedByDatePagedAsync(true, page, pageSize, ct);
+            return Ok(result);
+        }
+
+        [HttpGet("sort-date/desc")]
+        public async Task<IActionResult> SortByDateDesc([FromQuery] int page, [FromQuery] int pageSize, CancellationToken ct)
+        {
+            var result = await _service.GetSortedByDatePagedAsync(false, page, pageSize, ct);
+            return Ok(result);
+        }
+
+        [HttpGet("sort-delivery/nearest")]
+        public async Task<IActionResult> SortByDeliveryNearest([FromQuery] int page, [FromQuery] int pageSize, CancellationToken ct)
+        {
+            var result = await _service.GetSortedByDeliveryDatePagedAsync(true, page, pageSize, ct);
+            return Ok(result);
+        }
+
+        [HttpGet("sort-delivery/farthest")]
+        public async Task<IActionResult> SortByDeliveryFarthest([FromQuery] int page, [FromQuery] int pageSize, CancellationToken ct)
+        {
+            var result = await _service.GetSortedByDeliveryDatePagedAsync(false, page, pageSize, ct);
+            return Ok(result);
+        }
+
+        [HttpGet("stats/email/accepted")]
+        public async Task<IActionResult> GetEmailStatsByAccepted(
+        [FromQuery] int page,
+        [FromQuery] int pageSize,
+        CancellationToken ct)
+        {
+            var result = await _service.GetEmailsByAcceptedCountPagedAsync(page, pageSize, ct);
+            return Ok(result);
+        }
+
+        [HttpGet("sort-stock-coverage/highest")]
+        public async Task<IActionResult> SortByStockCoverageHighest(
+        [FromQuery] int page,
+        [FromQuery] int pageSize,
+        CancellationToken ct)
+        {
+            var result = await _service.GetSortedByStockCoveragePagedAsync(page, pageSize, ct);
+            return Ok(result);
+        }
+ 
+
+        [HttpGet("filter-by-order-date")]
+        public async Task<IActionResult> FilterByOrderDate(
+            [FromQuery] DateOnly date,
+            [FromQuery] int page,
+            [FromQuery] int pageSize,
+            CancellationToken ct)
+        {
+            var result = await _service.GetByOrderRequestDatePagedAsync(date, page, pageSize, ct);
+            return Ok(result);
+        }
+
+        [HttpGet("search")]
+        public async Task<IActionResult> Search(
+            [FromQuery(Name = "keyword")] string keyword,
+            [FromQuery] int page,
+            [FromQuery] int pageSize,
+            CancellationToken ct)
+        {
+            var result = await _service.SearchPagedAsync(keyword, page, pageSize, ct);
+            return Ok(result);
+        }
+
+
     }
 }

@@ -96,6 +96,7 @@ namespace AMMS.Application.Services
             await _requestRepo.SaveChangesAsync();
         }
         public Task<order_request?> GetByIdAsync(int id) => _requestRepo.GetByIdAsync(id);
+
         public async Task<PagedResultLite<order_request>> GetPagedAsync(int page, int pageSize)
         {
             if (page <= 0) page = 1;
@@ -200,5 +201,35 @@ namespace AMMS.Application.Services
                 OrderCode = newOrder.code
             };
         }
+
+        public Task<PagedResultLite<RequestSortedDto>> GetSortedByQuantityPagedAsync(
+    bool ascending, int page, int pageSize, CancellationToken ct = default)
+    => _requestRepo.GetSortedByQuantityPagedAsync(ascending, page, pageSize, ct);
+
+        public Task<PagedResultLite<RequestSortedDto>> GetSortedByDatePagedAsync(
+    bool ascending, int page, int pageSize, CancellationToken ct = default)
+    => _requestRepo.GetSortedByDatePagedAsync(ascending, page, pageSize, ct);
+
+        public Task<PagedResultLite<RequestSortedDto>> GetSortedByDeliveryDatePagedAsync(
+    bool nearestFirst, int page, int pageSize, CancellationToken ct = default)
+    => _requestRepo.GetSortedByDeliveryDatePagedAsync(nearestFirst, page, pageSize, ct);
+
+        public Task<PagedResultLite<RequestEmailStatsDto>>GetEmailsByAcceptedCountPagedAsync(
+    int page, int pageSize, CancellationToken ct = default)
+    => _requestRepo.GetEmailsByAcceptedCountPagedAsync(page, pageSize, ct);
+
+        public Task<PagedResultLite<RequestStockCoverageDto>> GetSortedByStockCoveragePagedAsync(
+    int page, int pageSize, CancellationToken ct = default)
+    => _requestRepo.GetSortedByStockCoveragePagedAsync(page, pageSize, ct);
+
+        public Task<PagedResultLite<RequestSortedDto>> GetByOrderRequestDatePagedAsync(
+    DateOnly date, int page, int pageSize, CancellationToken ct = default)
+    => _requestRepo.GetByOrderRequestDatePagedAsync(date, page, pageSize, ct);
+
+        public Task<PagedResultLite<RequestSortedDto>> SearchPagedAsync(
+     string keyword, int page, int pageSize, CancellationToken ct = default)
+     => _requestRepo.SearchPagedAsync(keyword, page, pageSize, ct);
+
+
     }
 }
