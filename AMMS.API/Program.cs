@@ -86,6 +86,7 @@ builder.Services.AddScoped<IDealService, DealService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+builder.Services.AddScoped<IQuoteRepository, QuoteRepository>();
 
 // Logging
 builder.Logging.ClearProviders();

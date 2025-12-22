@@ -14,4 +14,8 @@
     <Folder Include="DTOs\Materials\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="DTOs\Enums\ProductTypeCodeGeneral.cs" />
+  </ItemGroup>
+
 </Project>

@@ -34,23 +34,41 @@ namespace AMMS.Application.Rules
             // Thêm cho mỗi cao bản (chỉ áp dụng hộp màu)
             public const int PER_PLATE = 10;
 
-            public static int GetBaseWaste(ProductTypeCode productType)
+            public static int GetBaseWaste(string productTypeCode)
             {
-                return productType switch
+                productTypeCode = (productTypeCode ?? "").Trim();
+
+                // 1) Gạch
+                if (Enum.TryParse<ProductTypeCodeOfGach>(productTypeCode, true, out var gach))
                 {
-                    ProductTypeCode.GACH_1MAU => GACH_1MAU,
-                    ProductTypeCode.GACH_XUAT_KHAU_DON_GIAN => GACH_XUAT_KHAU_DON_GIAN,
-                    ProductTypeCode.GACH_XUAT_KHAU_TERACON => GACH_XUAT_KHAU_TERACON,
-                    ProductTypeCode.GACH_NOI_DIA_4SP => GACH_NOI_DIA_4SP,
-                    ProductTypeCode.GACH_NOI_DIA_6SP => GACH_NOI_DIA_6SP,
-                    ProductTypeCode.HOP_MAU_1LUOT_DON_GIAN => HOP_MAU_1LUOT_DON_GIAN,
-                    ProductTypeCode.HOP_MAU_1LUOT_THUONG => HOP_MAU_1LUOT_THUONG,
-                    ProductTypeCode.HOP_MAU_1LUOT_KHO => HOP_MAU_1LUOT_KHO,
-                    ProductTypeCode.HOP_MAU_AQUA_DOI => HOP_MAU_AQUA_DOI,
-                    ProductTypeCode.HOP_MAU_2LUOT => HOP_MAU_2LUOT_1 + HOP_MAU_2LUOT_2,
-                    _ => 200
-                };
+                    return gach switch
+                    {
+                        ProductTypeCodeOfGach.GACH_1MAU => GACH_1MAU,
+                        ProductTypeCodeOfGach.GACH_XUAT_KHAU_DON_GIAN => GACH_XUAT_KHAU_DON_GIAN,
+                        ProductTypeCodeOfGach.GACH_XUAT_KHAU_TERACON => GACH_XUAT_KHAU_TERACON,
+                        ProductTypeCodeOfGach.GACH_NOI_DIA_4SP => GACH_NOI_DIA_4SP,
+                        ProductTypeCodeOfGach.GACH_NOI_DIA_6SP => GACH_NOI_DIA_6SP,
+                        _ => 200
+                    };
+                }
+
+                // 2) Hộp màu
+                if (Enum.TryParse<ProductTypeCodeOfHop_mau>(productTypeCode, true, out var hop))
+                {
+                    return hop switch
+                    {
+                        ProductTypeCodeOfHop_mau.HOP_MAU_1LUOT_DON_GIAN => HOP_MAU_1LUOT_DON_GIAN,
+                        ProductTypeCodeOfHop_mau.HOP_MAU_1LUOT_THUONG => HOP_MAU_1LUOT_THUONG,
+                        ProductTypeCodeOfHop_mau.HOP_MAU_1LUOT_KHO => HOP_MAU_1LUOT_KHO,
+                        ProductTypeCodeOfHop_mau.HOP_MAU_AQUA_DOI => HOP_MAU_AQUA_DOI,
+                        ProductTypeCodeOfHop_mau.HOP_MAU_2LUOT => HOP_MAU_2LUOT_1 + HOP_MAU_2LUOT_2,
+                        _ => 200
+                    };
+                }
+
+                return 200;
             }
+
         }
 
         // ==================== HAO HỤT CÔNG ĐOẠN BẾ ====================
@@ -188,26 +206,30 @@ namespace AMMS.Application.Rules
             public const decimal HOP_MAU = 0.0009m;                 // Hộp màu
             public const decimal GACH_NHIEU_MAU = 0.001m;          // Gạch nhiều màu
 
-            public static decimal GetRate(ProductTypeCode productType)
+            public static decimal GetRate(string productTypeCode)
             {
-                return productType switch
+                productTypeCode = (productTypeCode ?? "").Trim();
+
+                if (Enum.TryParse<ProductTypeCodeOfGach>(productTypeCode, true, out var gach))
                 {
-                    ProductTypeCode.GACH_1MAU => GACH_NOI_DIA,
-                    ProductTypeCode.GACH_XUAT_KHAU_DON_GIAN => GACH_XUAT_KHAU_DON_GIAN,
-                    ProductTypeCode.GACH_XUAT_KHAU_TERACON => GACH_NHIEU_MAU,
-                    ProductTypeCode.GACH_NOI_DIA_4SP => GACH_NHIEU_MAU,
-                    ProductTypeCode.GACH_NOI_DIA_6SP => GACH_NHIEU_MAU,
-                    _ when productType.ToString().StartsWith("HOP_MAU") => HOP_MAU,
-                    _ => HOP_MAU
-                };
+                    return gach switch
+                    {
+                        ProductTypeCodeOfGach.GACH_1MAU => GACH_NOI_DIA,
+                        ProductTypeCodeOfGach.GACH_XUAT_KHAU_DON_GIAN => GACH_XUAT_KHAU_DON_GIAN,
+                        ProductTypeCodeOfGach.GACH_XUAT_KHAU_TERACON => GACH_NHIEU_MAU,
+                        ProductTypeCodeOfGach.GACH_NOI_DIA_4SP => GACH_NHIEU_MAU,
+                        ProductTypeCodeOfGach.GACH_NOI_DIA_6SP => GACH_NHIEU_MAU,
+                        _ => HOP_MAU
+                    };
+                }
+                return HOP_MAU;
             }
+
         }
 
         // ==================== ĐỊNH MỨC KEO PHỦ ====================
-
         /// <summary>
         /// Định mức keo phủ (kg/m2 tờ in)
-        /// Tính theo dung dịch keo đã pha
         /// </summary>
         public static class CoatingGlueRates
         {

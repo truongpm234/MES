@@ -41,10 +41,5 @@ namespace AMMS.Application.Services
             return Task.FromResult(result);
         }
 
-        public Task<List<string>> GetAllTypeFormAsync()
-        {
-            var result = Enum.GetNames(typeof(ProductTypeCode)).ToList();
-            return Task.FromResult(result);
-        }
     }
 }

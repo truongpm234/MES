@@ -1,6 +1,7 @@
 ﻿using AMMS.Application.Interfaces;
 using AMMS.Infrastructure.Entities;
 using AMMS.Infrastructure.Interfaces;
+using AMMS.Shared.DTOs.Enums;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,6 +20,22 @@ namespace AMMS.Application.Services
         public async Task<List<product_type>> GetAllAsync()
         {
             return await _productTypeRepository.GetAllAsync();
+        }
+        
+        public Task<List<string>> GetAllTypeFormGachAsync()
+        {
+            var result = Enum.GetNames(typeof(ProductTypeCodeOfGach)).ToList();
+            return Task.FromResult(result);
+        }
+        public Task<List<string>> GetAllTypeHop_MauAsync()
+        {
+            var result = Enum.GetNames(typeof(ProductTypeCodeOfHop_mau)).ToList();
+            return Task.FromResult(result);
+        }
+        public Task<List<string>> GetAllTypeGeneralAsync()
+        {
+            var result = Enum.GetNames(typeof(ProductTypeCodeGeneral)).ToList();
+            return Task.FromResult(result);
         }
     }
 }
