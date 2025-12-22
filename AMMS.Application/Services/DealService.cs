@@ -13,19 +13,22 @@ namespace AMMS.Application.Services
         private readonly IOrderRepository _orderRepo;
         private readonly IConfiguration _config;
         private readonly IEmailService _emailService;
+        private readonly IQuoteRepository _quoteRepo;
 
         public DealService(
             IRequestRepository requestRepo,
             ICostEstimateRepository estimateRepo,
             IOrderRepository orderRepo,
             IConfiguration config,
-            IEmailService emailService)
+            IEmailService emailService,
+            IQuoteRepository quoteRepo)
         {
             _requestRepo = requestRepo;
             _estimateRepo = estimateRepo;
             _orderRepo = orderRepo;
             _config = config;
             _emailService = emailService;
+            _quoteRepo = quoteRepo;
         }
 
         // ================= SEND QUOTE =================
@@ -40,6 +43,18 @@ namespace AMMS.Application.Services
 
             if (string.IsNullOrWhiteSpace(req.customer_email))
                 throw new Exception("Customer email missing");
+
+            var quote = new quote
+            {
+                // customer_id = req.customer_id,  
+                // consultant_id = req.consultant_id,
+                total_amount = est.final_total_cost,
+                status = "Sent",
+                created_at = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
+            };
+
+            await _quoteRepo.AddAsync(quote);
+            await _quoteRepo.SaveChangesAsync();
 
             var baseUrl = _config["Deal:BaseUrl"]!;
             var token = Guid.NewGuid().ToString("N");

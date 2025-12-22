@@ -42,15 +42,8 @@ namespace AMMS.Application.Services
             var result = Enum.GetNames(typeof(PaperCode)).ToList();
             return Task.FromResult(result);
         }
-
-        public Task<List<string>> GetAllTypeFormAsync()
-        {
-            var result = Enum.GetNames(typeof(ProductTypeCode)).ToList();
-            return Task.FromResult(result);
-        }
-
         public Task<PagedResultLite<MaterialShortageDto>> GetShortageForAllOrdersPagedAsync(
-            int page, int pageSize, CancellationToken ct = default)
-            => _materialRepository.GetShortageForAllOrdersPagedAsync(page, pageSize, ct);
+            int page, int pageSize, CancellationToken ct = default) => 
+            _materialRepository.GetShortageForAllOrdersPagedAsync(page, pageSize, ct);
     }
 }

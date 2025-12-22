@@ -41,13 +41,6 @@ namespace AMMS.API.Controllers
             return Ok(data);
         }
 
-        [HttpGet("get-all-form-type")]
-        public async Task<ActionResult<List<string>>> GetAllTypeFormAsync()
-        {
-            var data = await _materialService.GetAllTypeFormAsync();
-            return Ok(data);
-        }
-
         [HttpGet("shortage-for-orders")]
         public async Task<IActionResult> GetShortageForAllOrders(
             [FromQuery] int page = 1,

@@ -41,27 +41,37 @@ namespace AMMS.Application.Services
         /// <summary>
         /// Resolve ProductTypeCode từ product_type và form_product
         /// </summary>
-        private static ProductTypeCode ResolveProductType(string productType, string? formProduct)
+        private static string ResolveProductTypeCode(string productType, string? formProduct)
         {
-            // Nếu product_type là dạng chung (HOP_MAU hoặc VO_HOP_GACH)
-            if (productType.Equals("HOP_MAU", StringComparison.OrdinalIgnoreCase) ||
-                productType.Equals("VO_HOP_GACH", StringComparison.OrdinalIgnoreCase))
+            productType = (productType ?? "").Trim();
+            formProduct = formProduct?.Trim();
+
+            if (Enum.TryParse<ProductTypeCodeGeneral>(productType, true, out var general))
             {
-                if (string.IsNullOrWhiteSpace(formProduct))
+                if (general == ProductTypeCodeGeneral.HOP_MAU ||
+                    general == ProductTypeCodeGeneral.VO_HOP_GACH)
                 {
-                    throw new ArgumentException(
-                        $"form_product is required when product_type is '{productType}'. " +
-                        $"Please specify the detailed product form (e.g., HOP_MAU_1LUOT_DON_GIAN, GACH_NOI_DIA_4SP)");
+                    if (string.IsNullOrWhiteSpace(formProduct))
+                    {
+                        throw new ArgumentException(
+                            $"form_product is required when product_type is '{productType}'. " +
+                            $"Please specify detailed form (e.g., HOP_MAU_1LUOT_THUONG, GACH_NOI_DIA_4SP).");
+                    }
+
+                    return formProduct!;
                 }
 
-                // Parse form_product
-                return ParseEnum<ProductTypeCode>(formProduct, "form_product");
+                return general.ToString();
             }
 
-            // Nếu product_type đã là giá trị cụ thể, parse trực tiếp
-            return ParseEnum<ProductTypeCode>(productType, "product_type");
-        }
+            if (Enum.TryParse<ProductTypeCodeOfGach>(productType, true, out _))
+                return productType;
 
+            if (Enum.TryParse<ProductTypeCodeOfHop_mau>(productType, true, out _))
+                return productType;
+
+            return productType;
+        }
         public async Task<PaperEstimateResponse> EstimatePaperAsync(PaperEstimateRequest req)
         {
             // =====================
@@ -79,12 +89,12 @@ namespace AMMS.Application.Services
             // =====================
             // 3. RESOLVE PRODUCT TYPE
             // =====================
-            var productType = ResolveProductType(req.product_type, req.form_product);
+            var productTypeCode = ResolveProductTypeCode(req.product_type, req.form_product);
 
             // =====================
             // 4. TÍNH KÍCH THƯỚC TRIỂN KHAI
             // =====================
-            var (printW, printH) = CalculatePrintSize(req, productType);
+            var (printW, printH) = CalculatePrintSize(req, productTypeCode);
 
             // =====================
             // 5. TÍNH N-UP
@@ -99,7 +109,7 @@ namespace AMMS.Application.Services
             // =====================
             // 7. TÍNH HAO HỤT THEO CÔNG ĐOẠN
             // =====================
-            var wasteResult = CalculateWasteWithSmartScaling(req, sheetsBase, productType);
+            var wasteResult = CalculateWasteWithSmartScaling(req, sheetsBase, productTypeCode);
 
             // =====================
             // 8. CẢNH BÁO ĐƠN NHỎ
@@ -165,18 +175,13 @@ namespace AMMS.Application.Services
             // =====================
             // 5. RESOLVE PRODUCT TYPE & TÍNH CHI PHÍ VẬT LIỆU KHÁC
             // =====================
-            var productType = ResolveProductType(req.product_type, req.form_product);
+            var productTypeCode = ResolveProductTypeCode(req.product_type, req.form_product);
             var coatingType = ParseEnum<CoatingType>(req.coating_type ?? "NONE", "coating_type");
             var processes = ParseProcesses(req.production_processes);
 
             // ✅ DÙNG totalPrintAreaM2 thay vì totalAreaM2
-            var materialCosts = CalculateMaterialCosts(
-                totalPrintAreaM2,  // ← ✅ FIXED: Diện tích bản in
-                productType,
-                coatingType,
-                processes,
-                req.has_lamination
-            );
+            var materialCosts = CalculateMaterialCosts(totalPrintAreaM2, productTypeCode, coatingType, processes, req.has_lamination);
+
 
             // =====================
             // 6. TỔNG VẬT LIỆU + KHẤU HAO
@@ -286,11 +291,11 @@ namespace AMMS.Application.Services
             return paper;
         }
 
-        private (int printW, int printH) CalculatePrintSize(PaperEstimateRequest req, ProductTypeCode productType)
+        private (int printW, int printH) CalculatePrintSize(PaperEstimateRequest req, string productTypeCode)
         {
             int tabWidth = req.glue_tab_mm > 0 ? req.glue_tab_mm : 20;
-            bool isBoxProduct = productType.ToString().StartsWith("HOP_MAU");
-            bool isBrickProduct = productType.ToString().StartsWith("GACH_");
+            bool isBoxProduct = productTypeCode.StartsWith("HOP_MAU", StringComparison.OrdinalIgnoreCase);
+            bool isBrickProduct = productTypeCode.StartsWith("GACH_", StringComparison.OrdinalIgnoreCase);
 
             int printW, printH;
 
@@ -332,15 +337,15 @@ namespace AMMS.Application.Services
 
             return nUp;
         }
-        
 
-        private WasteResult CalculateWasteWithSmartScaling(PaperEstimateRequest req, int sheetsBase, ProductTypeCode productType)
+
+        private WasteResult CalculateWasteWithSmartScaling(PaperEstimateRequest req, int sheetsBase, string productTypeCode)
         {
             var coatingType = ParseEnum<CoatingType>(req.coating_type ?? "NONE", "coating_type");
             var processes = ParseProcesses(req.production_processes);
 
             // Tính hao hụt IN với smart scaling
-            int wastePrinting = CalculateSmartPrintingWaste(productType, req.number_of_plates, sheetsBase);
+            int wastePrinting = CalculateSmartPrintingWaste(productTypeCode, req.number_of_plates, sheetsBase);
 
             // Tính hao hụt các công đoạn khác
             int wasteDieCutting = processes.Contains(ProcessType.BE)
@@ -383,12 +388,12 @@ namespace AMMS.Application.Services
             };
         }
 
-        private int CalculateSmartPrintingWaste(ProductTypeCode productType, int numberOfPlates, int sheetsBase)
+        private int CalculateSmartPrintingWaste(string productTypeCode, int numberOfPlates, int sheetsBase)
         {
-            int standardWaste = WasteCalculationRules.PrintingWaste.GetBaseWaste(productType);
+            int standardWaste = WasteCalculationRules.PrintingWaste.GetBaseWaste(productTypeCode);
 
             // Thêm cho cao bản
-            if (productType.ToString().StartsWith("HOP_MAU") && numberOfPlates > 0)
+            if (productTypeCode.StartsWith("HOP_MAU", StringComparison.OrdinalIgnoreCase) && numberOfPlates > 0)
             {
                 standardWaste += numberOfPlates * WasteCalculationRules.PrintingWaste.PER_PLATE;
             }
@@ -427,12 +432,12 @@ namespace AMMS.Application.Services
                    $"tổng cộng {sheetsWithWaste} tờ.";
         }
 
-        private MaterialCostResult CalculateMaterialCosts(decimal totalAreaM2, ProductTypeCode productType, CoatingType coatingType, List<ProcessType> processes, bool hasLamination)
+        private MaterialCostResult CalculateMaterialCosts(decimal totalAreaM2, string productTypeCode, CoatingType coatingType, List<ProcessType> processes, bool hasLamination)
         {
             var result = new MaterialCostResult();
 
             // MỰC IN
-            result.InkRate = MaterialRates.InkRates.GetRate(productType);
+            result.InkRate = MaterialRates.InkRates.GetRate(productTypeCode);
             result.InkWeightKg = totalAreaM2 * result.InkRate;
             result.InkCost = result.InkWeightKg * MaterialPrices.INK_PRICE_PER_KG;
 
