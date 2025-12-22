@@ -47,5 +47,15 @@ namespace AMMS.API.Controllers
             var data = await _materialService.GetAllTypeFormAsync();
             return Ok(data);
         }
+
+        [HttpGet("shortage-for-orders")]
+        public async Task<IActionResult> GetShortageForAllOrders(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10,
+            CancellationToken ct = default)
+        {
+            var result = await _materialService.GetShortageForAllOrdersPagedAsync(page, pageSize, ct);
+            return Ok(result);
+        }
     }
 }
