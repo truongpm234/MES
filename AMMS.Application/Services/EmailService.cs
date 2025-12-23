@@ -59,7 +59,7 @@ namespace AMMS.Application.Services
             => email.Trim().ToLowerInvariant();
 
         private int ExpiryMinutes =>
-            int.TryParse(_config["Otp:ExpiryMinutes"], out var m) ? m : 5;
+            int.TryParse(_config["Otp:ExpiryMinutes"], out var m) ? m : 500000;
 
         private int MaxAttempts =>
             int.TryParse(_config["Otp:MaxAttempts"], out var a) ? a : 5;

@@ -46,8 +46,8 @@ namespace AMMS.Application.Services
 
             var quote = new quote
             {
-                // customer_id = req.customer_id,  
-                // consultant_id = req.consultant_id,
+                //customer_id = req.customer_id,
+                //consultant_id = req.consultant_id,
                 total_amount = est.final_total_cost,
                 status = "Sent",
                 created_at = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
