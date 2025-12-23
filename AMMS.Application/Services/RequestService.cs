@@ -168,7 +168,6 @@ namespace AMMS.Application.Services
             // 🔍 Kiểm tra tồn kho vật tư
             var hasEnoughStock = await _requestRepo.HasEnoughStockForRequestAsync(requestId);
 
-            // Nếu thiếu ⇒ "Not enough", đủ ⇒ "New"
             var orderStatus = hasEnoughStock ? "Scheduled" : "Not enough";
 
             // Tạo order

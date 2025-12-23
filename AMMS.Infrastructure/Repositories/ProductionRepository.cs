@@ -35,6 +35,15 @@ namespace AMMS.Infrastructure.Repositories
                 .Select(p => p.order!.delivery_date)
                 .FirstOrDefaultAsync(); 
         }
+        public Task AddAsync(production p)
+        {
+            _db.productions.Add(p);
+            return Task.CompletedTask;
+        }
 
+        public Task SaveChangesAsync() => _db.SaveChangesAsync();
+
+        public Task<production?> GetByIdAsync(int prodId)
+            => _db.productions.FirstOrDefaultAsync(x => x.prod_id == prodId);
     }
 }

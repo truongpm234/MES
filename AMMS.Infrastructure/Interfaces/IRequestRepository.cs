@@ -15,8 +15,6 @@ namespace AMMS.Infrastructure.Interfaces
         Task<int> CountAsync();
         Task<List<order_request>> GetPagedAsync(int skip, int take);
         Task<bool> AnyOrderLinkedAsync(int requestId);
-
-        // kiểm tra 1 request có đủ tồn kho vật tư không
         Task<bool> HasEnoughStockForRequestAsync(int requestId, CancellationToken ct = default);
         Task<PagedResultLite<RequestSortedDto>> GetSortedByQuantityPagedAsync(
     bool ascending, int page, int pageSize, CancellationToken ct = default);
@@ -32,9 +30,7 @@ namespace AMMS.Infrastructure.Interfaces
     DateOnly date, int page, int pageSize, CancellationToken ct = default);
         Task<PagedResultLite<RequestSortedDto>> SearchPagedAsync(
     string keyword, int page, int pageSize, CancellationToken ct = default);
-
         Task<string?> GetEmailByPhoneAsync(string phone, CancellationToken ct = default);
-
         Task<PagedResultLite<OrderListDto>> GetOrdersByPhonePagedAsync(
             string phone, int page, int pageSize, CancellationToken ct = default);
 

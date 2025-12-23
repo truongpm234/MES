@@ -1,0 +1,14 @@
+﻿using AMMS.Shared.DTOs.Boms;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace AMMS.Application.Interfaces
+{
+    public interface IMaterialPerUnitService
+    {
+        Task<MaterialPerUnitDto> GetMaterialPerUnitAsync(int orderRequestId);
+    }
+}

@@ -7,11 +7,9 @@ using System.Threading.Tasks;
 
 namespace AMMS.Infrastructure.Interfaces
 {
-    public interface IProductionRepository
+    public interface ITaskLogRepository
     {
-        Task<DateTime?> GetNearestDeliveryDateAsync();
-        Task AddAsync(production p);
+        Task AddAsync(task_log log);
         Task SaveChangesAsync();
-        Task<production?> GetByIdAsync(int prodId);
     }
 }

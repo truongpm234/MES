@@ -3,6 +3,7 @@ using AMMS.Infrastructure.Entities;
 using AMMS.Infrastructure.Interfaces;
 using AMMS.Shared.DTOs.Estimates;
 using Microsoft.EntityFrameworkCore;
+using System.Reflection.PortableExecutable;
 
 public class MachineRepository : IMachineRepository
 {
@@ -81,5 +82,18 @@ public class MachineRepository : IMachineRepository
 
         return result;
     }
+    public Task<machine?> GetByMachineCodeAsync(string machineCode)
+        => _db.machines.FirstOrDefaultAsync(x => x.machine_code == machineCode && x.is_active);
+
+    public Task<machine?> FindFirstActiveByProcessNameAsync(string processName)
+        => _db.machines.FirstOrDefaultAsync(x => x.is_active && x.process_name.ToLower() == processName.Trim().ToLower());
+    public async Task<machine>? FindMachineByProcess(string processName)
+    {
+        return _db.machines
+            .Where(m => m.is_active && m.process_name == processName)
+            .OrderByDescending(m => m.capacity_per_hour) // ưu tiên máy mạnh
+            .FirstOrDefault();
+    }
+
 }
 
