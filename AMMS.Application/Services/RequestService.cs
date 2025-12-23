@@ -169,7 +169,7 @@ namespace AMMS.Application.Services
             var hasEnoughStock = await _requestRepo.HasEnoughStockForRequestAsync(requestId);
 
             // Nếu thiếu ⇒ "Not enough", đủ ⇒ "New"
-            var orderStatus = hasEnoughStock ? "New" : "Not enough";
+            var orderStatus = hasEnoughStock ? "Scheduled" : "Not enough";
 
             // Tạo order
             var code = await _orderRepo.GenerateNextOrderCodeAsync();
