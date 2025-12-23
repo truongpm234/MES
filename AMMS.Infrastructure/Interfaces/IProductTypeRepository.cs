@@ -10,5 +10,6 @@ namespace AMMS.Infrastructure.Interfaces
     public interface IProductTypeRepository
     {
         Task<List<product_type>> GetAllAsync();
+        Task<product_type?> GetByCodeAsync(string code);
     }
 }

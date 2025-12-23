@@ -5,6 +5,7 @@ namespace AMMS.Infrastructure.Interfaces
 {
     public interface IOrderRepository
     {
+        Task<List<OrderResponseDto>> GetPagedWithFulfillAsync(int skip, int take, CancellationToken ct = default);
         Task AddOrderAsync(order entity);
         Task AddOrderItemAsync(order_item entity);
         void Update(order entity);

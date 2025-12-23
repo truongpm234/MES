@@ -39,9 +39,7 @@ namespace AMMS.API.Controllers
         }
 
         [HttpGet("paged")]
-        public async Task<IActionResult> GetPaged(
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 10)
+        public async Task<IActionResult> GetPaged([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
             var result = await _service.GetPagedAsync(page, pageSize);
             return Ok(result);

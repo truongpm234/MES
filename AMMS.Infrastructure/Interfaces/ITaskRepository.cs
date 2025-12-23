@@ -7,11 +7,11 @@ using System.Threading.Tasks;
 
 namespace AMMS.Infrastructure.Interfaces
 {
-    public interface IProductionRepository
+    public interface ITaskRepository
     {
-        Task<DateTime?> GetNearestDeliveryDateAsync();
-        Task AddAsync(production p);
+        Task AddRangeAsync(IEnumerable<task> tasks);
         Task SaveChangesAsync();
-        Task<production?> GetByIdAsync(int prodId);
+        Task<task?> GetByIdAsync(int taskId);
+        Task<task?> GetNextTaskAsync(int prodId, int currentSeqNum);
     }
 }

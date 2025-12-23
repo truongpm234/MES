@@ -55,13 +55,10 @@ namespace AMMS.Infrastructure.Repositories
             if (pageSize <= 0) pageSize = 10;
             var skip = (page - 1) * pageSize;
 
-            // ===== 1. Định nghĩa khoảng 30 ngày gần nhất (Dùng DateTime.Now.Date => Kind không phải UTC) =====
             var today = DateTime.Now.Date;
             var historyStartDate = today.AddDays(-30);
             var historyEndDate = today;
 
-            // ===== 2. Lấy dữ liệu BOM + OrderItem + Material (chỉ JOIN, không nhân chia ở SQL) =====
-            //  - Lưu ý: oi.quantity giả sử là int / int? -> cast sang decimal
             var bomRows = await (
                 from b in _db.boms.AsNoTracking()
                 join oi in _db.order_items.AsNoTracking()

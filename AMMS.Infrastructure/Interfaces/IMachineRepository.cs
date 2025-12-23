@@ -17,5 +17,8 @@ namespace AMMS.Infrastructure.Interfaces
         Task<List<machine>> GetActiveMachinesAsync();
         Task<List<machine>> GetMachinesByProcessAsync(string processName);
         Task<Dictionary<string, decimal>> GetDailyCapacityByProcessAsync();
+        Task<machine?> GetByMachineCodeAsync(string machineCode);
+        Task<machine?> FindFirstActiveByProcessNameAsync(string processName);
+        Task<machine>? FindMachineByProcess(string processName);
     }
 }

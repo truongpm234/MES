@@ -249,14 +249,12 @@ public partial class AppDbContext : DbContext
                 .HasDefaultValue("NONE");
             entity.Property(e => e.has_lamination).HasDefaultValue(false);
 
-            // FK tới orders (giữ nguyên như cũ)
             entity.HasOne(d => d.order)
                 .WithMany()
                 .HasForeignKey(d => d.order_id)
                 .OnDelete(DeleteBehavior.SetNull)
                 .HasConstraintName("fk_order_request_order");
 
-            // 🔥 FK mới tới quotes
             entity.HasOne(d => d.quote)
                 .WithMany()
                 .HasForeignKey(d => d.quote_id)
@@ -277,7 +275,7 @@ public partial class AppDbContext : DbContext
         modelBuilder.Entity<product_type_process>(entity =>
         {
             entity.HasKey(e => e.process_id).HasName("product_type_process_pkey");
-            entity.ToTable("product_type_process");
+            entity.ToTable("product_type_process", "AMMS_DB");
             entity.Property(e => e.is_active).HasDefaultValue(true);
             entity.Property(e => e.machine).HasMaxLength(50);
             entity.Property(e => e.process_name).HasMaxLength(100);
@@ -291,10 +289,10 @@ public partial class AppDbContext : DbContext
 
         modelBuilder.Entity<production>(entity =>
         {
+            entity.ToTable("productions", "AMMS_DB");
+
             entity.HasKey(e => e.prod_id).HasName("productions_pkey");
-
             entity.HasIndex(e => e.code, "productions_code_key").IsUnique();
-
             entity.Property(e => e.code).HasMaxLength(20);
             entity.Property(e => e.end_date).HasColumnType("timestamp without time zone");
             entity.Property(e => e.start_date).HasColumnType("timestamp without time zone");
