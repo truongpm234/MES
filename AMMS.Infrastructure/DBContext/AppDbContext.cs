@@ -58,7 +58,6 @@ public partial class AppDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.HasDefaultSchema("public");
         modelBuilder.Entity<bom>(entity =>
         {
             entity.HasKey(e => e.bom_id).HasName("boms_pkey");
@@ -67,12 +66,6 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.wastage_percent)
                 .HasPrecision(5, 2)
                 .HasDefaultValueSql("5.0");
-
-            // ✅ ADD CHECK CONSTRAINT (0..100)
-            entity.HasCheckConstraint(
-                "chk_wastage_percent",
-                "\"wastage_percent\" BETWEEN 0 AND 100"
-            );
 
             entity.HasOne(d => d.material).WithMany(p => p.boms)
                 .HasForeignKey(d => d.material_id)
