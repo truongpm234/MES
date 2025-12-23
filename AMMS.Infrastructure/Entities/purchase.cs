@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace AMMS.Infrastructure.Entities;
-
+[Table("purchases", Schema = "AMMS_DB")]
 public partial class purchase
 {
     public int purchase_id { get; set; }
