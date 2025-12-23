@@ -58,7 +58,6 @@ public partial class AppDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.HasDefaultSchema("public");
         modelBuilder.Entity<bom>(entity =>
         {
             entity.HasKey(e => e.bom_id).HasName("boms_pkey");
@@ -487,7 +486,6 @@ public partial class AppDbContext : DbContext
         modelBuilder.Entity<cost_estimate>(entity =>
         {
             entity.HasKey(e => e.estimate_id).HasName("cost_estimate_pkey");
-            entity.ToTable("cost_estimate", "AMMS_DB");
 
             // Chi phí giấy
             entity.Property(e => e.paper_cost).HasPrecision(18, 2);
