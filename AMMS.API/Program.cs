@@ -98,6 +98,8 @@ builder.Services.AddScoped<IProductTypeProcessSeedService, ProductTypeProcessSee
 builder.Services.AddScoped<IProductionSchedulingService, ProductionSchedulingService>();
 builder.Services.AddScoped<ITaskQrTokenService, TaskQrTokenService>();
 builder.Services.AddScoped<ITaskScanService, TaskScanService>();
+builder.Services.AddScoped<IMaterialPurchaseRequestService, MaterialPurchaseRequestService>();
+
 
 
 // Logging

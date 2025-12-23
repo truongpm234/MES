@@ -1,5 +1,6 @@
 ﻿using AMMS.Application.Interfaces;
 using AMMS.Application.Services;
+using AMMS.Shared.DTOs.Purchases;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,10 +11,13 @@ namespace AMMS.API.Controllers
     public class OrdersController : ControllerBase
     {
         private readonly IOrderService _service;
+        private readonly IMaterialPurchaseRequestService _materialPurchaseService;
 
-        public OrdersController(IOrderService service)
+
+        public OrdersController(IOrderService service, IMaterialPurchaseRequestService materialPurchaseService)
         {
             _service = service;
+            _materialPurchaseService = materialPurchaseService;
         }
 
         [HttpGet("get-by-{code}")]
@@ -55,5 +59,30 @@ namespace AMMS.API.Controllers
             return Ok(dto);
         }
 
+        [HttpPost("{orderId:int}/auto-purchase")]
+        public async Task<IActionResult> CreateAutoPurchase(
+            int orderId,
+            [FromBody] AutoPurchaseFromOrderRequest req,
+            CancellationToken ct)
+        {
+            try
+            {
+                var result = await _materialPurchaseService.CreateFromOrderAsync(
+                    orderId,
+                    req.ManagerId,
+                    ct);
+
+                return Ok(result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Ví dụ: không thiếu NVL
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 }

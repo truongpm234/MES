@@ -188,17 +188,18 @@ namespace AMMS.Infrastructure.Repositories
 
             // ===== 6. Map sang DTO =====
             var dtoList = paged
-                .Select(x => new MaterialShortageDto(
-                    x.MaterialId,
-                    x.code,
-                    x.name,
-                    x.unit,
-                    x.StockQty,
-                    x.RequiredQty,
-                    x.ShortageQty,
-                    x.NeedToBuyQty
-                ))
-                .ToList();
+    .Select(x => new MaterialShortageDto
+    {
+        MaterialId = x.MaterialId,
+        Code = x.code,
+        Name = x.name,
+        Unit = x.unit,
+        StockQty = x.StockQty,
+        RequiredQty = x.RequiredQty,
+        ShortageQty = x.ShortageQty,
+        NeedToBuyQty = x.NeedToBuyQty
+    })
+    .ToList();
 
             return new PagedResultLite<MaterialShortageDto>
             {
