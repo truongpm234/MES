@@ -24,4 +24,6 @@ public partial class purchase
     public virtual ICollection<purchase_item> purchase_items { get; set; } = new List<purchase_item>();
 
     public virtual supplier? supplier { get; set; }
+
+    public virtual ICollection<stock_move> stock_moves { get; set; } = new List<stock_move>();
 }
