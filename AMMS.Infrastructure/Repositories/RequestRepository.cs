@@ -439,14 +439,14 @@ namespace AMMS.Infrastructure.Repositories
                 orderby o.order_date descending, o.order_id descending
                 select new OrderListDto
                 {
-                    OrderId = o.order_id,
+                    Order_id = o.order_id,
                     Code = o.code,
-                    OrderDate = o.order_date,
-                    DeliveryDate = o.delivery_date,
+                    Order_date = o.order_date,
+                    Delivery_date = o.delivery_date,
                     Status = o.status,
-                    PaymentStatus = o.payment_status,
-                    QuoteId = o.quote_id,
-                    TotalAmount = o.total_amount
+                    Payment_status = o.payment_status,
+                    Quote_id = o.quote_id,
+                    Total_amount = o.total_amount
                 };
 
             var list = await baseQuery

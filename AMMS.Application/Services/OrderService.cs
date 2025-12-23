@@ -29,19 +29,19 @@ namespace AMMS.Application.Services
             }
             return order;
         }
-        public async Task<PagedResultLite<OrderListDto>> GetPagedAsync(int page, int pageSize)
+        public async Task<PagedResultLite<OrderResponseDto>> GetPagedAsync(int page, int pageSize)
         {
             if (page <= 0) page = 1;
             if (pageSize <= 0) pageSize = 10;
 
             var skip = (page - 1) * pageSize;
 
-            var list = await _orderRepo.GetPagedAsync(skip, pageSize + 1);
+            var list = await _orderRepo.GetPagedWithFulfillAsync(skip, pageSize + 1);
 
             var hasNext = list.Count > pageSize;
             var data = hasNext ? list.Take(pageSize).ToList() : list;
 
-            return new PagedResultLite<OrderListDto>
+            return new PagedResultLite<OrderResponseDto>
             {
                 Page = page,
                 PageSize = pageSize,

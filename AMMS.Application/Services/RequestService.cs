@@ -173,7 +173,7 @@ namespace AMMS.Application.Services
                 delivery_date = req.delivery_date,
                 status = "New",
                 payment_status = "Unpaid",
-                quote_id = req.quote_id        // 🔥 GÁN QUOTE VÀO ORDER
+                quote_id = req.quote_id      
             };
 
             await _orderRepo.AddOrderAsync(newOrder);
