@@ -241,5 +241,20 @@ namespace AMMS.Application.Services
         public Task<PagedResultLite<RequestSortedDto>> SearchPagedAsync(
             string keyword, int page, int pageSize, CancellationToken ct = default)
             => _requestRepo.SearchPagedAsync(keyword, page, pageSize, ct);
+        public async Task<OrderRequestDesignFileResponse?> GetDesignFileAsync(int orderRequestId, CancellationToken ct = default)
+        {
+            var path = await _requestRepo.GetDesignFilePathAsync(orderRequestId, ct);
+
+            if (path == null)
+            {
+                return null;
+            }
+
+            return new OrderRequestDesignFileResponse
+            {
+                order_request_id = orderRequestId,
+                design_file_path = path
+            };
+        }
     }
 }

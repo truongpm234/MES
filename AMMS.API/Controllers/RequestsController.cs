@@ -191,7 +191,16 @@ namespace AMMS.API.Controllers
             var result = await _service.SearchPagedAsync(keyword, page, pageSize, ct);
             return Ok(result);
         }
+        [HttpGet("design-file/{id:int}")]
+        public async Task<IActionResult> GetDesignFile(int id, CancellationToken ct)
+        {
+            var result = await _service.GetDesignFileAsync(id, ct);
 
+            if (result == null)
+                return NotFound(new { message = "Order request not found" });
+
+            return Ok(result);
+        }
 
     }
 }

@@ -33,6 +33,7 @@ namespace AMMS.Infrastructure.Interfaces
         Task<string?> GetEmailByPhoneAsync(string phone, CancellationToken ct = default);
         Task<PagedResultLite<OrderListDto>> GetOrdersByPhonePagedAsync(
             string phone, int page, int pageSize, CancellationToken ct = default);
+        Task<string?> GetDesignFilePathAsync(int orderRequestId, CancellationToken ct = default);
 
     }
 }

@@ -1,6 +1,7 @@
 ﻿using AMMS.Application.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 
 namespace AMMS.API.Controllers
 {
@@ -9,7 +10,7 @@ namespace AMMS.API.Controllers
     public class UploadsController : ControllerBase
     {
         private readonly IUploadFileService _uploadService;
-
+        private readonly IRequestService _requestRepo;
         public UploadsController(IUploadFileService uploadService)
         {
             _uploadService = uploadService;
@@ -32,4 +33,5 @@ namespace AMMS.API.Controllers
             return Ok(new { url });
         }
     }
+
 }

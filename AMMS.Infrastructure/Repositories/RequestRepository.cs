@@ -497,5 +497,13 @@ namespace AMMS.Infrastructure.Repositories
             };
         }
 
+        public Task<string?> GetDesignFilePathAsync(int orderRequestId, CancellationToken ct = default)
+        {
+            return _db.order_requests
+                .AsNoTracking()
+                .Where(x => x.order_request_id == orderRequestId)
+                .Select(x => x.design_file_path)
+                .FirstOrDefaultAsync(ct);
+        }
     }
 }

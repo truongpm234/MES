@@ -27,7 +27,7 @@ namespace AMMS.Application.Interfaces
         Task<PagedResultLite<RequestSortedDto>> SearchPagedAsync(
     string keyword, int page, int pageSize, CancellationToken ct = default);
 
-
+        Task<OrderRequestDesignFileResponse?> GetDesignFileAsync(int orderRequestId, CancellationToken ct = default);
 
     }
 }
