@@ -420,6 +420,9 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.main_material_type).HasMaxLength(50);
             entity.Property(e => e.name).HasMaxLength(150);
             entity.Property(e => e.phone).HasMaxLength(20);
+            entity.Property(e => e.rating)
+            .HasColumnType("numeric(3,2)")
+            .HasDefaultValue(0);
         });
 
         modelBuilder.Entity<task>(entity =>
