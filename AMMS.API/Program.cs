@@ -89,8 +89,6 @@ builder.Services.AddScoped<ISupplierRepository, SupplierRepository>();
 builder.Services.AddScoped<ISupplierService, SupplierService>();
 builder.Services.AddScoped<IPurchaseRepository, PurchaseRepository>();
 builder.Services.AddScoped<IPurchaseService, PurchaseService>();
-builder.Services.AddScoped<IStockMoveRepository, StockMoveRepository>();
-builder.Services.AddScoped<IStockMoveService, StockMoveService>();
 builder.Services.AddScoped<IOrderLookupService, OrderLookupService>();
 builder.Services.AddScoped<IProductTypeProcessRepository, ProductTypeProcessRepository>();
 builder.Services.AddScoped<ITaskRepository, TaskRepository>();
@@ -100,6 +98,8 @@ builder.Services.AddScoped<IProductTypeProcessSeedService, ProductTypeProcessSee
 builder.Services.AddScoped<IProductionSchedulingService, ProductionSchedulingService>();
 builder.Services.AddScoped<ITaskQrTokenService, TaskQrTokenService>();
 builder.Services.AddScoped<ITaskScanService, TaskScanService>();
+builder.Services.AddScoped<IMaterialPurchaseRequestService, MaterialPurchaseRequestService>();
+
 
 
 // Logging

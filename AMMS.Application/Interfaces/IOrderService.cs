@@ -8,6 +8,10 @@ namespace AMMS.Application.Interfaces
     {
         Task<order> GetOrderByCodeAsync(string code);
         Task<order> GetByIdAsync(int id);
+
+        Task<OrderDetailDto?> GetDetailAsync(int id, CancellationToken ct = default);
+
         Task<PagedResultLite<OrderResponseDto>> GetPagedAsync(int page, int pageSize);
+
     }
 }

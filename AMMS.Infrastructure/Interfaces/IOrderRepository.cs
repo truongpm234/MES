@@ -16,5 +16,6 @@ namespace AMMS.Infrastructure.Interfaces
         Task DeleteAsync(int id);
         Task<int> SaveChangesAsync();
         Task<string> GenerateNextOrderCodeAsync();
+        Task<OrderDetailDto?> GetDetailByIdAsync(int orderId, CancellationToken ct = default);
     }
 }
