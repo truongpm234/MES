@@ -13,8 +13,8 @@ namespace AMMS.Infrastructure.Interfaces
         Task<int> CountAsync(CancellationToken ct = default);
 
         // ⬇️ dùng cho list có kèm materials
-        Task<List<SupplierWithMaterialsDto>> GetPagedWithMaterialsAsync(
-            int skip, int take, CancellationToken ct = default);
+        Task<List<SupplierLiteDto>> GetPagedAsync(
+        int skip, int take, CancellationToken ct = default);
 
         Task<SupplierDetailDto?> GetSupplierDetailWithMaterialsAsync(
             int supplierId, int page, int pageSize, CancellationToken ct = default);

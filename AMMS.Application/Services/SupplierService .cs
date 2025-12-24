@@ -17,20 +17,20 @@ namespace AMMS.Application.Services
             _repo = repo;
         }
 
-        public async Task<PagedResultLite<SupplierWithMaterialsDto>> GetPagedAsync(
-            int page, int pageSize, CancellationToken ct = default)
+        public async Task<PagedResultLite<SupplierLiteDto>> GetPagedAsync(
+     int page, int pageSize, CancellationToken ct = default)
         {
             if (page <= 0) page = 1;
             if (pageSize <= 0) pageSize = 10;
 
             var skip = (page - 1) * pageSize;
 
-            var list = await _repo.GetPagedWithMaterialsAsync(skip, pageSize + 1, ct);
+            var list = await _repo.GetPagedAsync(skip, pageSize + 1, ct);
 
             var hasNext = list.Count > pageSize;
             var data = hasNext ? list.Take(pageSize).ToList() : list;
 
-            return new PagedResultLite<SupplierWithMaterialsDto>
+            return new PagedResultLite<SupplierLiteDto>
             {
                 Page = page,
                 PageSize = pageSize,

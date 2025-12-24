@@ -28,6 +28,25 @@ namespace AMMS.API.Controllers
             var result = await _service.CreatePurchaseRequestAsync(dto, createdBy, ct);
             return StatusCode(StatusCodes.Status201Created, result);
         }
+
+        [HttpGet("orders")]
+        public async Task<IActionResult> GetPurchaseOrders(
+    [FromQuery] int page = 1,
+    [FromQuery] int pageSize = 10,
+    CancellationToken ct = default)
+        {
+            var result = await _service.GetPurchaseOrdersAsync(page, pageSize, ct);
+            return Ok(result);
+        }
+
+        [HttpPost("orders")]
+        public async Task<IActionResult> CreatePurchaseOrder(
+            [FromBody] CreatePurchaseRequestDto dto,
+            CancellationToken ct)
+        {
+            var result = await _service.CreatePurchaseOrderAsync(dto, ct);
+            return StatusCode(StatusCodes.Status201Created, result);
+        }
     }
 }
 

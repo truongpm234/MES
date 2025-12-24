@@ -6,12 +6,14 @@ using System.Threading.Tasks;
 
 namespace AMMS.Shared.DTOs.Suppliers
 {
-    public record SupplierDto(
-        int SupplierId,
-        string Name,
-        string? ContactPerson,
-        string? Phone,
-        string? Email,
-        string? MainMaterialType
-    );
+    public class SupplierLiteDto
+    {
+        public int SupplierId { get; init; }
+        public string Name { get; init; } = null!;
+        public string? ContactPerson { get; init; }
+        public string? Phone { get; init; }
+        public string? Email { get; init; }
+        public string? MainMaterialType { get; init; }
+        public decimal Rating { get; init; }
+    }
 }
