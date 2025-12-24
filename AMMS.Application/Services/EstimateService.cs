@@ -38,9 +38,6 @@ namespace AMMS.Application.Services
             return result;
         }
 
-        /// <summary>
-        /// Resolve ProductTypeCode từ product_type và form_product
-        /// </summary>
         private static string ResolveProductTypeCode(string productType, string? formProduct)
         {
             productType = (productType ?? "").Trim();

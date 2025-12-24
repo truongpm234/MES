@@ -27,17 +27,11 @@ namespace AMMS.Application.Services
             _taskRepo = taskRepo;
         }
 
-        /// <summary>
-        /// Công đoạn thủ công nếu:
-        /// - note của machine có chứa "thủ công" / "thu cong"
-        /// - hoặc không tìm thấy machine
-        /// - hoặc routing step không khai machine (null/empty)
-        /// </summary>
         private static bool IsManual(machine? m, string? stepMachine)
         {
-            if (string.IsNullOrWhiteSpace(stepMachine)) return true; // routing không gán máy => thủ công
+            if (string.IsNullOrWhiteSpace(stepMachine)) return true; 
 
-            if (m == null) return true; // routing có process nhưng DB machines chưa cấu hình => coi là thủ công để không crash
+            if (m == null) return true; 
 
             var note = (m.note ?? "");
             return note.Contains("thủ công", StringComparison.OrdinalIgnoreCase)
@@ -58,7 +52,7 @@ namespace AMMS.Application.Services
             };
 
             await _prodRepo.AddAsync(prod);
-            await _prodRepo.SaveChangesAsync(); // để có prod.prod_id
+            await _prodRepo.SaveChangesAsync(); 
 
             // 2) load routing steps
             var steps = await _ptpRepo.GetActiveByProductTypeIdAsync(productTypeId);
@@ -67,16 +61,14 @@ namespace AMMS.Application.Services
 
             // 3) create tasks
             var tasks = new List<task>();
-            var firstSeq = steps.Min(x => x.seq_num); // an toàn hơn First()
+            var firstSeq = steps.Min(x => x.seq_num);
 
             foreach (var s in steps.OrderBy(x => x.seq_num))
             {
-                // s.machine ở đây là PROCESS_NAME (IN, BE, DAN...) hoặc null nếu thủ công
                 machine? m = null;
 
                 if (!string.IsNullOrWhiteSpace(s.machine))
                 {
-                    // tìm 1 máy theo process (ưu tiên theo repo bạn implement)
                     m = await _machineRepo.FindMachineByProcess(s.machine);
                 }
 
@@ -85,14 +77,12 @@ namespace AMMS.Application.Services
 
                 var status = s.seq_num == firstSeq ? "Ready" : "Unassigned";
 
-                // noteSuffix an toàn tuyệt đối (không dùng m!)
                 var noteSuffix = manual
                     ? $"(Thủ công - cần {printersNeeded} Printer)"
                     : m != null
                         ? $"(Máy {m.machine_code} - cần {printersNeeded} Printer)"
                         : $"(Máy cho công đoạn {s.machine} chưa cấu hình - cần {printersNeeded} Printer)";
 
-                // ✅ Task.machine nên lưu MACHINE_CODE (IN-01, BE-TAY-01...), không lưu process_name
                 var taskMachine = manual ? null : m?.machine_code;
 
                 tasks.Add(new task
@@ -102,8 +92,7 @@ namespace AMMS.Application.Services
                     seq_num = s.seq_num,
                     name = $"{s.process_name} {noteSuffix}",
                     status = status,
-                    machine = taskMachine,   // ✅ sửa: lưu machine_code hoặc null
-                    assigned_to = null,
+                    machine = taskMachine,   
                     start_time = null,
                     end_time = null
                 });
