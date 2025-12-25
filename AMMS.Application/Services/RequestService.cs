@@ -131,13 +131,12 @@ namespace AMMS.Application.Services
                 };
             }
 
-            // chỉ request đã Accepted mới convert
-            if (!string.Equals(req.process_status?.Trim(), "accepted", StringComparison.OrdinalIgnoreCase))
+             if (!string.Equals(req.process_status?.Trim(), "Accepted", StringComparison.OrdinalIgnoreCase))
             {
                 return new ConvertRequestToOrderResponse
                 {
                     Success = false,
-                    Message = "Only process_status = 'accepted' can be converted to order",
+                    Message = "Only process_status = 'Accepted' can be converted to order",
                     RequestId = requestId
                 };
             }
@@ -177,15 +176,14 @@ namespace AMMS.Application.Services
                 code = code,
                 order_date = DateTime.Now,
                 delivery_date = req.delivery_date,
-                status = orderStatus,     // 🔥 set theo tồn kho
+                status = orderStatus,    
                 payment_status = "Unpaid",
                 quote_id = req.quote_id
             };
 
             await _orderRepo.AddOrderAsync(newOrder);
-            await _orderRepo.SaveChangesAsync(); // để có order_id
+            await _orderRepo.SaveChangesAsync();
 
-            // Tạo order item
             var newItem = new order_item
             {
                 order_id = newOrder.order_id,
@@ -196,7 +194,6 @@ namespace AMMS.Application.Services
 
             await _orderRepo.AddOrderItemAsync(newItem);
 
-            // Link ngược về request
             req.order_id = newOrder.order_id;
             await _requestRepo.UpdateAsync(req);
 

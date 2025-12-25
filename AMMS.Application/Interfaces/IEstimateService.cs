@@ -1,6 +1,7 @@
 ﻿using AMMS.Infrastructure.Entities;
 using AMMS.Shared.DTOs.Estimates;
 using AMMS.Shared.DTOs.Estimates.AMMS.Shared.DTOs.Estimates;
+using AMMS.Shared.DTOs.Requests;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,6 +18,6 @@ namespace AMMS.Application.Interfaces
         Task<cost_estimate?> GetEstimateByIdAsync(int estimateId);
         Task<cost_estimate?> GetEstimateByOrderRequestIdAsync(int orderRequestId);
         Task<ProcessCostBreakdownResponse> CalculateProcessCostBreakdownAsync(CostEstimateRequest req);
-
+        Task<DepositByRequestResponse?> GetDepositByRequestIdAsync(int requestId, CancellationToken ct = default);
     }
 }

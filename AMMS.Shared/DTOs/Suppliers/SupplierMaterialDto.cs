@@ -11,6 +11,7 @@ namespace AMMS.Shared.DTOs.Suppliers
         string Code,
         string Name,
         string Unit,
+        decimal? UnitPrice,
         bool IsActive,
         string? Note
     );

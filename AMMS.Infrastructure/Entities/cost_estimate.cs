@@ -97,6 +97,10 @@ public partial class cost_estimate
     // Ghi chú
     public string? cost_note { get; set; }
 
+    [Column(TypeName = "numeric(18,2)")]
+    [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
+    public decimal deposit_amount { get; private set; }
+
     // Navigation
     public virtual order_request order_request { get; set; } = null!;
 }

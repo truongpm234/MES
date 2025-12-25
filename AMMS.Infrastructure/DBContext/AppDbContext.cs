@@ -1,5 +1,6 @@
 ﻿using AMMS.Infrastructure.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -540,6 +541,13 @@ public partial class AppDbContext : DbContext
                 .HasForeignKey(d => d.order_request_id)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("fk_cost_estimate_order_request");
+            entity.Property(x => x.deposit_amount)
+            .HasColumnName("deposit_amount")
+            .HasColumnType("numeric(18,2)")
+            .HasComputedColumnSql("ROUND(final_total_cost * 0.30, 0)", stored: true)
+            .ValueGeneratedOnAddOrUpdate();
+            entity.Property(x => x.deposit_amount).Metadata.SetBeforeSaveBehavior(PropertySaveBehavior.Ignore);
+            entity.Property(x => x.deposit_amount).Metadata.SetAfterSaveBehavior(PropertySaveBehavior.Ignore);
         });
 
         modelBuilder.Entity<supplier_material>(entity =>

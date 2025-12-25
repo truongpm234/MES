@@ -67,7 +67,7 @@ namespace AMMS.Infrastructure.Repositories
 
             if (supplier == null) return null;
 
-            // ✅ Query base: select ra anonymous trước (EF dịch SQL được)
+            // ✅ baseQuery: thêm cost_price
             var baseQuery =
                 from sm in _db.supplier_materials.AsNoTracking()
                 where sm.supplier_id == supplierId
@@ -79,13 +79,13 @@ namespace AMMS.Infrastructure.Repositories
                     m.code,
                     m.name,
                     m.unit,
+                    UnitPrice = m.cost_price,  // ✅ đơn giá từ material
                     sm.is_active,
                     sm.note
                 };
 
             var totalCount = await baseQuery.CountAsync(ct);
 
-            // ✅ OrderBy trước, rồi mới Select DTO
             var items = await baseQuery
                 .OrderBy(x => x.name)
                 .Skip((page - 1) * pageSize)
@@ -95,6 +95,7 @@ namespace AMMS.Infrastructure.Repositories
                     x.code,
                     x.name,
                     x.unit,
+                    x.UnitPrice,      
                     x.is_active,
                     x.note
                 ))
@@ -117,5 +118,6 @@ namespace AMMS.Infrastructure.Repositories
                 }
             };
         }
+
     }
 }

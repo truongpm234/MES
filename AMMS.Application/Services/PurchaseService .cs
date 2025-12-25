@@ -40,15 +40,18 @@ namespace AMMS.Application.Services
             var p = new purchase
             {
                 code = code,
+
                 supplier_id = dto.SupplierId,
                 created_by = createdBy,
-                status = "Pending",
+                status = "Pending",               
                 eta_date = ToUnspecified(dto.EtaDate),
                 created_at = DateTime.SpecifyKind(DateTime.Now, DateTimeKind.Unspecified),
             };
 
             await _repo.AddPurchaseAsync(p, ct);
-            await _repo.SaveChangesAsync(ct);
+
+          
+            await _repo.SaveChangesAsync(ct); 
 
             var items = dto.Items.Select(x => new purchase_item
             {
