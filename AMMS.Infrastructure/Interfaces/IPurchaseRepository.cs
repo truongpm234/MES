@@ -1,11 +1,6 @@
 ﻿using AMMS.Infrastructure.Entities;
 using AMMS.Shared.DTOs.Common;
 using AMMS.Shared.DTOs.Purchases;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace AMMS.Infrastructure.Interfaces
 {
@@ -18,18 +13,19 @@ namespace AMMS.Infrastructure.Interfaces
 
         Task<string> GenerateNextPurchaseCodeAsync(CancellationToken ct = default);
 
-        Task<PagedResultLite<PurchaseOrderListItemDto>> GetPurchaseOrdersAsync(int page, int pageSize, CancellationToken ct = default);
+        Task<PagedResultLite<PurchaseOrderListItemDto>> GetPurchaseOrdersAsync(
+            int page, int pageSize, CancellationToken ct = default);
 
         Task<string?> GetSupplierNameAsync(int? supplierId, CancellationToken ct = default);
-
         Task<bool> SupplierExistsAsync(int supplierId, CancellationToken ct = default);
-
         Task<int?> GetManagerUserIdAsync(CancellationToken ct = default);
 
-        Task<object> ReceiveAllPendingPurchasesAsync(int managerUserId, CancellationToken ct = default);
+        // ✅ CHANGED: receive theo purchaseId
+        Task<object> ReceiveAllPendingPurchasesAsync(
+            int purchaseId, int managerUserId, CancellationToken ct = default);
 
+        // ✅ CHANGED: pending có paging
         Task<PagedResultLite<PurchaseOrderListItemDto>> GetPendingPurchasesAsync(
-             int page, int pageSize, CancellationToken ct = default);
-
+            int page, int pageSize, CancellationToken ct = default);
     }
 }

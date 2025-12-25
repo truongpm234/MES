@@ -40,18 +40,15 @@ namespace AMMS.Application.Services
             var p = new purchase
             {
                 code = code,
-
                 supplier_id = dto.SupplierId,
                 created_by = createdBy,
-                status = "Pending",               
+                status = "Pending",
                 eta_date = ToUnspecified(dto.EtaDate),
                 created_at = DateTime.SpecifyKind(DateTime.Now, DateTimeKind.Unspecified),
             };
 
             await _repo.AddPurchaseAsync(p, ct);
-
-          
-            await _repo.SaveChangesAsync(ct); 
+            await _repo.SaveChangesAsync(ct);
 
             var items = dto.Items.Select(x => new purchase_item
             {
@@ -76,9 +73,9 @@ namespace AMMS.Application.Services
             int page, int pageSize, CancellationToken ct = default)
             => _repo.GetPurchaseOrdersAsync(page, pageSize, ct);
 
-        public Task<PagedResultLite<PurchaseOrderListItemDto>> GetPendingPurchasesAsync( // ✅ CHANGED
+        public Task<PagedResultLite<PurchaseOrderListItemDto>> GetPendingPurchasesAsync(
             int page, int pageSize, CancellationToken ct = default)
-            => _repo.GetPendingPurchasesAsync(page, pageSize, ct);          // ✅ CHANGED
+            => _repo.GetPendingPurchasesAsync(page, pageSize, ct);
 
         public async Task<PurchaseOrderListItemDto> CreatePurchaseOrderAsync(
             CreatePurchaseRequestDto dto,
@@ -136,6 +133,7 @@ namespace AMMS.Application.Services
             var totalQty = dto.Items.Sum(x => (decimal)x.Quantity);
             var supplierName = await _repo.GetSupplierNameAsync(dto.SupplierId, ct) ?? "N/A";
 
+            // ⚠️ DTO của bạn phải có constructor đúng chữ ký này
             return new PurchaseOrderListItemDto(
                 p.purchase_id,
                 p.code,
@@ -149,13 +147,14 @@ namespace AMMS.Application.Services
             );
         }
 
-        public async Task<object> ReceiveAllPendingPurchasesAsync(CancellationToken ct = default)
+        // ✅ CHANGED: receive theo purchaseId
+        public async Task<object> ReceiveAllPendingPurchasesAsync(int purchaseId, CancellationToken ct = default)
         {
             var managerId = await _repo.GetManagerUserIdAsync(ct);
             if (managerId == null)
-                throw new ArgumentException("User 'manager' not found. Please create it first.");
+                throw new ArgumentException("User 'manager' not found");
 
-            return await _repo.ReceiveAllPendingPurchasesAsync(managerId.Value, ct);
+            return await _repo.ReceiveAllPendingPurchasesAsync(purchaseId, managerId.Value, ct);
         }
     }
 }
