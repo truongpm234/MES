@@ -23,7 +23,7 @@ namespace AMMS.Application.Interfaces
 
         Task<object> ReceiveAllPendingPurchasesAsync(CancellationToken ct = default);
 
-        Task<IReadOnlyList<PurchaseOrderListItemDto>> GetPendingPurchasesAsync(
-        CancellationToken ct = default);
+        Task<PagedResultLite<PurchaseOrderListItemDto>> GetPendingPurchasesAsync( 
+            int page, int pageSize, CancellationToken ct = default);
     }
 }

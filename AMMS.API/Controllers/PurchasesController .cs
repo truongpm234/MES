@@ -56,9 +56,12 @@ namespace AMMS.API.Controllers
         }
 
         [HttpGet("pending")]
-        public async Task<IActionResult> GetPendingPurchases(CancellationToken ct)
+        public async Task<IActionResult> GetPendingPurchases( 
+             [FromQuery] int page = 1,                          
+             [FromQuery] int pageSize = 10,                     
+             CancellationToken ct = default)
         {
-            var result = await _service.GetPendingPurchasesAsync(ct);
+            var result = await _service.GetPendingPurchasesAsync(page, pageSize, ct);
             return Ok(result);
         }
 
