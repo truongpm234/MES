@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AMMS.Infrastructure.Entities;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,6 +11,9 @@ namespace AMMS.Application.Interfaces
     {
         Task SendDealAndEmailAsync(int orderRequestId);
         Task RejectDealAsync(int orderRequestId, string reason);
-        Task AcceptDealAsync(int orderRequestId);
+        Task<string> AcceptAndCreatePayOsLinkAsync(int orderRequestId);
+        Task MarkScheduledAsync(int orderRequestId);
+        Task SendConsultantStatusEmailAsync(order_request req, cost_estimate? est, string statusText, decimal? paidAmount = null, DateTime? paidAt = null);
+        Task NotifyConsultantPaidAsync(int orderRequestId, decimal paidAmount, DateTime paidAt);
     }
 }

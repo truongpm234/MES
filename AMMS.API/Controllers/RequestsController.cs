@@ -1,7 +1,11 @@
 ﻿using AMMS.Application.Interfaces;
+using AMMS.Infrastructure.Entities;
+using AMMS.Infrastructure.Interfaces;
 using AMMS.Shared.DTOs.Email;
+using AMMS.Shared.DTOs.PayOS;
 using AMMS.Shared.DTOs.Requests;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 
 namespace AMMS.API.Controllers
 {
@@ -11,11 +15,13 @@ namespace AMMS.API.Controllers
     {
         private readonly IRequestService _service;
         private readonly IDealService _dealService;
+        private readonly IPaymentsService _paymentService;
 
-        public RequestsController(IRequestService service, IDealService dealService)
+        public RequestsController(IRequestService service, IDealService dealService, IPaymentsService paymentService)
         {
             _service = service;
             _dealService = dealService;
+            _paymentService = paymentService;
         }
 
         [HttpPost]
@@ -89,64 +95,78 @@ namespace AMMS.API.Controllers
             }
         }
 
-        [HttpGet("deal/accept")]
-        public async Task<IActionResult> Accept([FromQuery] int orderRequestId, [FromQuery] string token)
+        [HttpGet("accept-pay")]
+        public async Task<IActionResult> AcceptPay([FromQuery] int orderRequestId, [FromQuery] string token)
         {
-            await _dealService.AcceptDealAsync(orderRequestId);
-            await _service.ConvertToOrderAsync(orderRequestId);
-            return Ok("Bạn đã đồng ý báo giá. Nhân viên sẽ liên hệ sớm.");
+            var checkoutUrl = await _dealService.AcceptAndCreatePayOsLinkAsync(orderRequestId);
+            return Redirect(checkoutUrl);
         }
 
-        [HttpPost("deal/reject")]
-        public async Task<IActionResult> RejectDeal([FromBody] RejectDealRequest body)
+        [HttpGet("reject-form")]
+        public IActionResult RejectForm([FromQuery] int orderRequestId, [FromQuery] string token)
         {
-            if (string.IsNullOrWhiteSpace(body.reason))
-                return BadRequest("reason is required");
-
-            await _dealService.RejectDealAsync(body.orderRequestId, body.reason);
-            return Ok(new { message = "Rejected" });
+            var fe = "https://sep490-fe.vercel.app";
+            return Redirect($"{fe}/reject-deal");
         }
 
-        [HttpGet("sort-quantity/asc")]
-        public async Task<IActionResult> SortByQuantityAsc([FromQuery] int page, [FromQuery] int pageSize, CancellationToken ct)
+
+        [HttpGet("payos/return")]
+        public IActionResult PayOsReturn([FromQuery] int orderRequestId, [FromQuery] int orderCode)
         {
-            var result = await _service.GetSortedByQuantityPagedAsync(true, page, pageSize, ct);
-            return Ok(result);
+            var fe = "https://sep490-fe.vercel.app";
+            return Redirect($"{fe}");
+            //return Redirect($"{fe}/payment-success?orderRequestId={orderRequestId}");
         }
 
-        [HttpGet("sort-quantity/desc")]
-        public async Task<IActionResult> SortByQuantityDesc([FromQuery] int page, [FromQuery] int pageSize, CancellationToken ct)
+        [HttpGet("payos/cancel")]
+        public IActionResult PayOsCancel([FromQuery] int orderRequestId, [FromQuery] int orderCode)
         {
-            var result = await _service.GetSortedByQuantityPagedAsync(false, page, pageSize, ct);
-            return Ok(result);
+            var fe = "https://sep490-fe.vercel.app";
+            return Redirect($"{fe}");
+            //return Redirect($"{fe}/payment-cancel?orderRequestId={orderRequestId}");
         }
 
-        [HttpGet("sort-date/asc")]
-        public async Task<IActionResult> SortByDateAsc([FromQuery] int page, [FromQuery] int pageSize, CancellationToken ct)
+        [HttpPost("/api/payos/webhook")]
+        public async Task<IActionResult> PayOsWebhook([FromBody] PayOsWebhookDto payload, [FromServices] IPaymentRepository paymentRepo, CancellationToken ct)
         {
-            var result = await _service.GetSortedByDatePagedAsync(true, page, pageSize, ct);
-            return Ok(result);
-        }
+            var isPaid =
+                string.Equals(payload.status, "PAID", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(payload.status, "SUCCESS", StringComparison.OrdinalIgnoreCase);
 
-        [HttpGet("sort-date/desc")]
-        public async Task<IActionResult> SortByDateDesc([FromQuery] int page, [FromQuery] int pageSize, CancellationToken ct)
-        {
-            var result = await _service.GetSortedByDatePagedAsync(false, page, pageSize, ct);
-            return Ok(result);
-        }
+            if (!isPaid) return Ok(new { ok = true });
 
-        [HttpGet("sort-delivery/nearest")]
-        public async Task<IActionResult> SortByDeliveryNearest([FromQuery] int page, [FromQuery] int pageSize, CancellationToken ct)
-        {
-            var result = await _service.GetSortedByDeliveryDatePagedAsync(true, page, pageSize, ct);
-            return Ok(result);
-        }
+            var orderRequestId = payload.orderCode % 100000;
 
-        [HttpGet("sort-delivery/farthest")]
-        public async Task<IActionResult> SortByDeliveryFarthest([FromQuery] int page, [FromQuery] int pageSize, CancellationToken ct)
-        {
-            var result = await _service.GetSortedByDeliveryDatePagedAsync(false, page, pageSize, ct);
-            return Ok(result);
+            var existed = await _paymentService.GetPaidByProviderOrderCodeAsync("PAYOS", payload.orderCode, ct);
+            if (existed != null && existed.status == "PAID")
+                return Ok(new { ok = true, message = "Already processed" });
+
+            var now = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
+            var amount = payload.amount.HasValue ? (decimal)payload.amount.Value : 0m;
+
+            await paymentRepo.AddAsync(new payment
+            {
+                order_request_id = orderRequestId,
+                provider = "PAYOS",
+                order_code = payload.orderCode,
+                amount = amount,
+                currency = "VND",
+                status = "PAID",
+                paid_at = now,
+                payos_payment_link_id = payload.paymentLinkId,
+                payos_transaction_id = payload.transactionId,
+                payos_raw = JsonSerializer.Serialize(payload),
+                created_at = now,
+                updated_at = now
+            }, ct);
+
+            await paymentRepo.SaveChangesAsync(ct);
+
+            await _dealService.MarkScheduledAsync(orderRequestId);
+
+            await _dealService.NotifyConsultantPaidAsync(orderRequestId, amount, now);
+
+            return Ok(new { ok = true });
         }
 
         [HttpGet("stats/email/accepted")]
@@ -159,38 +179,6 @@ namespace AMMS.API.Controllers
             return Ok(result);
         }
 
-        [HttpGet("sort-stock-coverage/highest")]
-        public async Task<IActionResult> SortByStockCoverageHighest(
-        [FromQuery] int page,
-        [FromQuery] int pageSize,
-        CancellationToken ct)
-        {
-            var result = await _service.GetSortedByStockCoveragePagedAsync(page, pageSize, ct);
-            return Ok(result);
-        }
- 
-
-        [HttpGet("filter-by-order-date")]
-        public async Task<IActionResult> FilterByOrderDate(
-            [FromQuery] DateOnly date,
-            [FromQuery] int page,
-            [FromQuery] int pageSize,
-            CancellationToken ct)
-        {
-            var result = await _service.GetByOrderRequestDatePagedAsync(date, page, pageSize, ct);
-            return Ok(result);
-        }
-
-        [HttpGet("search")]
-        public async Task<IActionResult> Search(
-            [FromQuery(Name = "keyword")] string keyword,
-            [FromQuery] int page,
-            [FromQuery] int pageSize,
-            CancellationToken ct)
-        {
-            var result = await _service.SearchPagedAsync(keyword, page, pageSize, ct);
-            return Ok(result);
-        }
         [HttpGet("design-file/{id:int}")]
         public async Task<IActionResult> GetDesignFile(int id, CancellationToken ct)
         {

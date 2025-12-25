@@ -20,11 +20,9 @@ namespace AMMS.Infrastructure.Interfaces
         Task<bool> SupplierExistsAsync(int supplierId, CancellationToken ct = default);
         Task<int?> GetManagerUserIdAsync(CancellationToken ct = default);
 
-        // ✅ CHANGED: receive theo purchaseId
         Task<object> ReceiveAllPendingPurchasesAsync(
             int purchaseId, int managerUserId, CancellationToken ct = default);
 
-        // ✅ CHANGED: pending có paging
         Task<PagedResultLite<PurchaseOrderListItemDto>> GetPendingPurchasesAsync(
             int page, int pageSize, CancellationToken ct = default);
     }

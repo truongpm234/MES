@@ -106,11 +106,13 @@ namespace AMMS.Infrastructure.Repositories
         }
 
         // =========================
-        // ✅ NEW: Build list query (all/pending)
+        // ✅ NEW/CHANGED: Build list query (all/pending)
+        // - add eta_date, status
+        // - join stock_moves(IN) + users => receivedByName
+        // - join materials (optional) => unit (MIXED/1 unit/null)
         // =========================
         private IQueryable<PurchaseOrderListItemDto> BuildPurchaseListQuery(string? statusFilter)
         {
-            // ✅ CHANGED: join thêm stock_moves (IN) và users để lấy tên người nhận
             var q =
                 from p in _db.purchases.AsNoTracking()
                 where statusFilter == null || p.status == statusFilter
@@ -123,21 +125,28 @@ namespace AMMS.Infrastructure.Repositories
                     on p.purchase_id equals i.purchase_id into items
                 from i in items.DefaultIfEmpty()
 
+                    // ✅ CHANGED: join materials để lấy unit (nếu bạn cần unit tổng)
+                join m in _db.materials.AsNoTracking()
+                    on i.material_id equals m.material_id into mats
+                from m in mats.DefaultIfEmpty()
+
+                    // ✅ CHANGED: join stock_moves IN
                 join sm in _db.stock_moves.AsNoTracking().Where(x => x.type == "IN")
                     on p.purchase_id equals sm.purchase_id into sms
                 from sm in sms.DefaultIfEmpty()
 
+                    // ✅ CHANGED: join users để lấy tên người nhận
                 join u in _db.users.AsNoTracking()
                     on sm.user_id equals u.user_id into us
                 from u in us.DefaultIfEmpty()
 
-                group new { p, s, i, sm, u } by new
+                group new { p, s, i, m, sm, u } by new
                 {
                     p.purchase_id,
                     p.code,
                     p.created_at,
-                    p.eta_date,                 // ✅ CHANGED
-                    p.status,                   // ✅ CHANGED
+                    p.eta_date,  // ✅
+                    p.status,    // ✅
                     SupplierName = (string?)(s != null ? s.name : null)
                 }
                 into g
@@ -148,12 +157,29 @@ namespace AMMS.Infrastructure.Repositories
                     g.Key.SupplierName ?? "N/A",
                     g.Key.created_at,
                     "manager",
+
+                    // total qty ordered
                     g.Sum(x => (decimal?)(x.i != null ? (x.i.qty_ordered ?? 0) : 0)) ?? 0m,
 
-                    // ✅ CHANGED: thêm eta_date + status + receivedByName (tùy DTO bạn)
+                    // ✅ CHANGED: eta_date + status + receivedByName + unit
                     g.Key.eta_date,
                     g.Key.status ?? "Pending",
-                    g.Max(x => x.u != null ? x.u.full_name : null)
+                    g.Max(x => x.u != null ? x.u.full_name : null),
+
+                    // unit: 0 unit => null, 1 unit => that unit, many => MIXED
+                    g.Select(x => x.m != null ? x.m.unit : null)
+                        .Where(v => v != null)
+                        .Distinct()
+                        .Count() == 0
+                        ? null
+                        : g.Select(x => x.m != null ? x.m.unit : null)
+                            .Where(v => v != null)
+                            .Distinct()
+                            .Count() == 1
+                            ? g.Select(x => x.m != null ? x.m.unit : null)
+                                .Where(v => v != null)
+                                .Max()
+                            : "MIXED"
                 );
 
             return q;
@@ -163,7 +189,9 @@ namespace AMMS.Infrastructure.Repositories
         // ✅ CHANGED: Get all purchases (paged)
         // =========================
         public Task<PagedResultLite<PurchaseOrderListItemDto>> GetPurchaseOrdersAsync(
-            int page, int pageSize, CancellationToken ct = default)
+            int page,
+            int pageSize,
+            CancellationToken ct = default)
         {
             var query = BuildPurchaseListQuery(statusFilter: null);
             return ToPagedAsync(query, page, pageSize, ct);
@@ -173,14 +201,17 @@ namespace AMMS.Infrastructure.Repositories
         // ✅ CHANGED: Get pending purchases (paged)
         // =========================
         public Task<PagedResultLite<PurchaseOrderListItemDto>> GetPendingPurchasesAsync(
-            int page, int pageSize, CancellationToken ct = default)
+            int page,
+            int pageSize,
+            CancellationToken ct = default)
         {
             var query = BuildPurchaseListQuery(statusFilter: "Pending");
             return ToPagedAsync(query, page, pageSize, ct);
         }
 
         // ===========================================================
-        // ✅ CHANGED: Receive purchase by purchaseId (fix status bug)
+        // ✅ CHANGED: Receive purchase by purchaseId (NOT receive all)
+        // - fix case "Nothing to receive" nhưng thực ra đã đủ => set Received
         // ===========================================================
         public async Task<object> ReceiveAllPendingPurchasesAsync(
             int purchaseId,
@@ -189,7 +220,7 @@ namespace AMMS.Infrastructure.Repositories
         {
             var strategy = _db.Database.CreateExecutionStrategy();
 
-            return await strategy.ExecuteAsync<Object>(async () =>
+            return await strategy.ExecuteAsync<object>(async () =>
             {
                 await using var tx = await _db.Database.BeginTransactionAsync(ct);
 
@@ -216,10 +247,9 @@ namespace AMMS.Infrastructure.Repositories
                 // 3) Tổng đã nhận theo material (IN)
                 var receivedMap = await _db.stock_moves
                     .AsNoTracking()
-                    .Where(m =>
-                        m.purchase_id == purchaseId &&
-                        m.type == "IN" &&
-                        m.material_id != null)
+                    .Where(m => m.purchase_id == purchaseId
+                                && m.type == "IN"
+                                && m.material_id != null)
                     .GroupBy(m => m.material_id!.Value)
                     .Select(g => new
                     {
@@ -228,7 +258,6 @@ namespace AMMS.Infrastructure.Repositories
                     })
                     .ToDictionaryAsync(x => x.MaterialId, x => x.Qty, ct);
 
-                // ✅ NEW: helper check đủ nhận
                 static bool IsFullyReceived(
                     List<purchase_item> its,
                     Dictionary<int, decimal> receivedBefore,
@@ -285,7 +314,7 @@ namespace AMMS.Infrastructure.Repositories
                     materialAddMap[materialId] += remain;
                 }
 
-                // ✅ CHANGED: nếu không còn gì để receive -> vẫn set Received nếu đã đủ từ trước
+                // ✅ CHANGED: không còn gì để receive -> vẫn set Received nếu đã đủ từ trước
                 if (stockMoves.Count == 0)
                 {
                     var fullyAlready = IsFullyReceived(items, receivedMap, new Dictionary<int, decimal>());

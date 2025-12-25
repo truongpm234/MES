@@ -27,7 +27,11 @@ namespace AMMS.Infrastructure.Repositories
 
         public async Task<cost_estimate?> GetByOrderRequestIdAsync(int orderRequestId)
         {
-            return await Task.FromResult(_db.cost_estimates.FirstOrDefault(ce => ce.order_request_id == orderRequestId));
+            return await _db.cost_estimates
+                .AsNoTracking()
+                .Where(x => x.order_request_id == orderRequestId)
+                .OrderByDescending(x => x.estimate_id)
+                .FirstOrDefaultAsync();
         }
 
         public async Task<cost_estimate?> GetByIdAsync(int id)
@@ -41,11 +45,13 @@ namespace AMMS.Infrastructure.Repositories
             await Task.CompletedTask;
         }
         public async Task<DepositByRequestResponse?> GetDepositByRequestIdAsync(
-            int requestId, CancellationToken ct = default)
+    int requestId, CancellationToken ct = default)
         {
             return await _db.cost_estimates
                 .AsNoTracking()
                 .Where(x => x.order_request_id == requestId)
+                .OrderByDescending(x => x.created_at)
+                .ThenByDescending(x => x.estimate_id)
                 .Select(x => new DepositByRequestResponse
                 {
                     order_request_id = x.order_request_id,
@@ -53,5 +59,6 @@ namespace AMMS.Infrastructure.Repositories
                 })
                 .FirstOrDefaultAsync(ct);
         }
+
     }
 }

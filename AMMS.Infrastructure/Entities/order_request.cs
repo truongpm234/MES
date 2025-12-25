@@ -62,4 +62,7 @@ public partial class order_request
     public virtual quote? quote { get; set; }
 
     public virtual order? order { get; set; }
+
+    public virtual ICollection<payment> payments { get; set; } = new List<payment>();
+
 }

@@ -69,10 +69,12 @@ namespace AMMS.Application.Services
             );
         }
 
+        // ✅ CHANGED: implement đúng interface
         public Task<PagedResultLite<PurchaseOrderListItemDto>> GetPurchaseOrdersAsync(
             int page, int pageSize, CancellationToken ct = default)
             => _repo.GetPurchaseOrdersAsync(page, pageSize, ct);
 
+        // ✅ CHANGED: pending trả ListItemDto (đúng repo)
         public Task<PagedResultLite<PurchaseOrderListItemDto>> GetPendingPurchasesAsync(
             int page, int pageSize, CancellationToken ct = default)
             => _repo.GetPendingPurchasesAsync(page, pageSize, ct);
@@ -133,7 +135,7 @@ namespace AMMS.Application.Services
             var totalQty = dto.Items.Sum(x => (decimal)x.Quantity);
             var supplierName = await _repo.GetSupplierNameAsync(dto.SupplierId, ct) ?? "N/A";
 
-            // ⚠️ DTO của bạn phải có constructor đúng chữ ký này
+            // ⚠️ nếu constructor DTO của bạn khác tham số, gửi mình file DTO mình khớp lại
             return new PurchaseOrderListItemDto(
                 p.purchase_id,
                 p.code,
@@ -143,11 +145,11 @@ namespace AMMS.Application.Services
                 totalQty,
                 p.eta_date,
                 p.status ?? "Pending",
-                null
+                received_by_name: null,
+                unit_summary: null
             );
         }
 
-        // ✅ CHANGED: receive theo purchaseId
         public async Task<object> ReceiveAllPendingPurchasesAsync(int purchaseId, CancellationToken ct = default)
         {
             var managerId = await _repo.GetManagerUserIdAsync(ct);
