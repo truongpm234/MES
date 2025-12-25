@@ -4,11 +4,6 @@ using AMMS.Infrastructure.Interfaces;
 using AMMS.Shared.DTOs.Common;
 using AMMS.Shared.DTOs.Purchases;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace AMMS.Infrastructure.Repositories
 {
@@ -35,8 +30,6 @@ namespace AMMS.Infrastructure.Repositories
 
         public async Task<string> GenerateNextPurchaseCodeAsync(CancellationToken ct = default)
         {
-            // ví dụ code: PUR000001, PUR000002...
-            // lấy code lớn nhất rồi +1
             var lastCode = await _db.purchases
                 .AsNoTracking()
                 .Where(p => p.code != null && p.code.StartsWith("PO"))
@@ -54,28 +47,39 @@ namespace AMMS.Infrastructure.Repositories
             return $"PO{next:D4}";
         }
 
-        public async Task<PagedResultLite<PurchaseOrderListItemDto>> GetPurchaseOrdersAsync(
-    int page,
-    int pageSize,
-    CancellationToken ct = default)
+        // ✅ NEW: dùng chung cho "all" và "pending"
+        private IQueryable<PurchaseOrderListItemDto> BuildPurchaseListQuery(string? statusFilter)
         {
-            if (page <= 0) page = 1;
-            if (pageSize <= 0) pageSize = 10;
-            if (pageSize > 200) pageSize = 200;
-
-            var baseQuery =
+            var q =
                 from p in _db.purchases.AsNoTracking()
+                where statusFilter == null || p.status == statusFilter
+
                 join s in _db.suppliers.AsNoTracking()
                     on p.supplier_id equals s.supplier_id into sup
                 from s in sup.DefaultIfEmpty()
+
                 join i in _db.purchase_items.AsNoTracking()
                     on p.purchase_id equals i.purchase_id into items
                 from i in items.DefaultIfEmpty()
-                group new { p, s, i } by new
+
+                    // ✅ CHANGED: join stock_moves IN để lấy người nhận
+                join sm in _db.stock_moves.AsNoTracking().Where(x => x.type == "IN")
+                    on p.purchase_id equals sm.purchase_id into sms
+                from sm in sms.DefaultIfEmpty()
+
+                    // ✅ CHANGED: join users để lấy ReceivedByName
+                join u in _db.users.AsNoTracking()
+                    on sm.user_id equals u.user_id into us
+                from u in us.DefaultIfEmpty()
+
+                    // ✅ CHANGED: group include eta_date + status
+                group new { p, s, i, sm, u } by new
                 {
                     p.purchase_id,
                     p.code,
                     p.created_at,
+                    p.eta_date,         
+                    p.status,           
                     SupplierName = (string?)(s != null ? s.name : null)
                 }
                 into g
@@ -86,12 +90,35 @@ namespace AMMS.Infrastructure.Repositories
                     g.Key.SupplierName ?? "N/A",
                     g.Key.created_at,
                     "manager",
-                    g.Sum(x => (decimal?)(x.i != null ? (x.i.qty_ordered ?? 0) : 0)) ?? 0m
+                    g.Sum(x => (decimal?)(x.i != null ? (x.i.qty_ordered ?? 0) : 0)) ?? 0m,
+                    g.Key.eta_date,     
+                    g.Key.status ?? "Pending", 
+                    g.Max(x => x.u != null ? x.u.full_name : null) 
                 );
+
+            return q;
+        }
+
+        // ✅ NEW
+        private static void NormalizePaging(ref int page, ref int pageSize)
+        {
+            if (page <= 0) page = 1;
+            if (pageSize <= 0) pageSize = 10;
+            if (pageSize > 200) pageSize = 200;
+        }
+
+        // ✅ NEW
+        private async Task<PagedResultLite<PurchaseOrderListItemDto>> ToPagedAsync(
+            IQueryable<PurchaseOrderListItemDto> query,
+            int page,
+            int pageSize,
+            CancellationToken ct)
+        {
+            NormalizePaging(ref page, ref pageSize);
 
             var skip = (page - 1) * pageSize;
 
-            var rows = await baseQuery
+            var rows = await query
                 .Skip(skip)
                 .Take(pageSize + 1)
                 .ToListAsync(ct);
@@ -106,6 +133,22 @@ namespace AMMS.Infrastructure.Repositories
                 HasNext = hasNext,
                 Data = rows
             };
+        }
+
+        // ✅ CHANGED: refactor dùng BuildPurchaseListQuery + ToPagedAsync
+        public Task<PagedResultLite<PurchaseOrderListItemDto>> GetPurchaseOrdersAsync(
+            int page, int pageSize, CancellationToken ct = default)
+        {
+            var query = BuildPurchaseListQuery(statusFilter: null); 
+            return ToPagedAsync(query, page, pageSize, ct);         
+        }
+
+        // ✅ CHANGED: giờ pending trả về PagedResultLite
+        public Task<PagedResultLite<PurchaseOrderListItemDto>> GetPendingPurchasesAsync(
+            int page, int pageSize, CancellationToken ct = default)
+        {
+            var query = BuildPurchaseListQuery(statusFilter: "Pending"); 
+            return ToPagedAsync(query, page, pageSize, ct);              
         }
 
         public Task<bool> SupplierExistsAsync(int supplierId, CancellationToken ct = default)
@@ -123,7 +166,6 @@ namespace AMMS.Infrastructure.Repositories
 
         public async Task<int?> GetManagerUserIdAsync(CancellationToken ct = default)
         {
-            // Cách đơn giản: username = "manager"
             return await _db.users.AsNoTracking()
                 .Where(u => u.username == "manager")
                 .Select(u => (int?)u.user_id)
@@ -138,7 +180,6 @@ namespace AMMS.Infrastructure.Repositories
             {
                 await using var tx = await _db.Database.BeginTransactionAsync(ct);
 
-                // 1) lấy PO pending
                 var pending = await _db.purchases
                     .AsTracking()
                     .Where(p => p.status == "Pending")
@@ -152,7 +193,6 @@ namespace AMMS.Infrastructure.Repositories
 
                 var purchaseIds = pending.Select(p => p.purchase_id).ToList();
 
-                // 2) lấy items theo các PO
                 var items = await _db.purchase_items
                     .AsNoTracking()
                     .Where(i => i.purchase_id != null && purchaseIds.Contains(i.purchase_id.Value))
@@ -160,7 +200,6 @@ namespace AMMS.Infrastructure.Repositories
 
                 if (items.Count == 0)
                 {
-                    // vẫn update trạng thái nếu bạn muốn, hoặc trả về báo không có item
                     foreach (var po in pending) po.status = "Received";
                     await _db.SaveChangesAsync(ct);
                     await tx.CommitAsync(ct);
@@ -170,9 +209,9 @@ namespace AMMS.Infrastructure.Repositories
 
                 var now = DateTime.SpecifyKind(DateTime.Now, DateTimeKind.Unspecified);
 
-                // 3) tạo stock_moves + gom qty theo material
                 var stockMoves = new List<stock_move>(items.Count);
                 var materialAddMap = new Dictionary<int, decimal>();
+                var codeMap = pending.ToDictionary(x => x.purchase_id, x => x.code);
 
                 foreach (var it in items)
                 {
@@ -181,13 +220,14 @@ namespace AMMS.Infrastructure.Repositories
                     if (qty <= 0) continue;
 
                     var materialId = it.material_id.Value;
+                    var refDoc = it.purchase_id.HasValue && codeMap.TryGetValue(it.purchase_id.Value, out var c) ? c : null;
 
                     stockMoves.Add(new stock_move
                     {
                         material_id = materialId,
                         type = "IN",
                         qty = qty,
-                        ref_doc = pending.First(p => p.purchase_id == it.purchase_id).code, // hoặc query map code nhanh hơn
+                        ref_doc = refDoc,
                         user_id = managerUserId,
                         move_date = now,
                         note = "Auto receive from PO",
@@ -201,7 +241,6 @@ namespace AMMS.Infrastructure.Repositories
                 if (stockMoves.Count > 0)
                     await _db.stock_moves.AddRangeAsync(stockMoves, ct);
 
-                // 4) update materials.stock_qty
                 var materialIds = materialAddMap.Keys.ToList();
                 var materials = await _db.materials
                     .AsTracking()
@@ -213,7 +252,6 @@ namespace AMMS.Infrastructure.Repositories
                     m.stock_qty = (m.stock_qty ?? 0) + materialAddMap[m.material_id];
                 }
 
-                // 5) update status PO
                 foreach (var po in pending)
                     po.status = "Received";
 
@@ -229,43 +267,5 @@ namespace AMMS.Infrastructure.Repositories
                 };
             });
         }
-
-        public async Task<List<PurchaseOrderListItemDto>> GetPendingPurchasesAsync(
-    CancellationToken ct = default)
-        {
-            var query =
-                from p in _db.purchases.AsNoTracking()
-                where p.status == "Pending"
-
-                join s in _db.suppliers.AsNoTracking()
-                    on p.supplier_id equals s.supplier_id into sup
-                from s in sup.DefaultIfEmpty()
-
-                join i in _db.purchase_items.AsNoTracking()
-                    on p.purchase_id equals i.purchase_id into items
-                from i in items.DefaultIfEmpty()
-
-                group new { p, s, i } by new
-                {
-                    p.purchase_id,
-                    p.code,
-                    p.created_at,
-                    SupplierName = (string?)(s != null ? s.name : null)
-                }
-                into g
-                orderby g.Key.purchase_id descending
-                select new PurchaseOrderListItemDto(
-                    g.Key.purchase_id,
-                    g.Key.code,
-                    g.Key.SupplierName ?? "N/A",
-                    g.Key.created_at,
-                    "manager",
-                    g.Sum(x => (decimal?)(x.i != null ? (x.i.qty_ordered ?? 0) : 0)) ?? 0m
-                );
-
-            return await query.ToListAsync(ct);
-        }
-
-
     }
 }
