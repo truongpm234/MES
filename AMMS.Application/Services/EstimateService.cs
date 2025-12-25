@@ -7,6 +7,7 @@ using AMMS.Shared.DTOs.Discount;
 using AMMS.Shared.DTOs.Enums;
 using AMMS.Shared.DTOs.Estimates;
 using AMMS.Shared.DTOs.Estimates.AMMS.Shared.DTOs.Estimates;
+using AMMS.Shared.DTOs.Requests;
 
 namespace AMMS.Application.Services
 {
@@ -905,7 +906,8 @@ namespace AMMS.Application.Services
                 details = details
             };
         }
-
+        public Task<DepositByRequestResponse?> GetDepositByRequestIdAsync(int requestId, CancellationToken ct = default)
+            => _estimateRepo.GetDepositByRequestIdAsync(requestId, ct);
 
     }
 }

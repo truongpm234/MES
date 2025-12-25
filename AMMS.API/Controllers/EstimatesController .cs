@@ -46,6 +46,14 @@ namespace AMMS.API.Controllers
             var res = await _service.CalculateProcessCostBreakdownAsync(req);
             return Ok(res);
         }
+        [HttpGet("deposit/by-request/{requestId:int}")]
+        public async Task<IActionResult> GetDepositByRequestId(int requestId, CancellationToken ct)
+        {
+            var result = await _service.GetDepositByRequestIdAsync(requestId, ct);
+            if (result == null)
+                return NotFound(new { message = "Cost estimate not found for this requestId" });
 
+            return Ok(result);
+        }
     }
 }

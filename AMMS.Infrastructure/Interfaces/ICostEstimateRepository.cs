@@ -1,4 +1,5 @@
 ﻿using AMMS.Infrastructure.Entities;
+using AMMS.Shared.DTOs.Requests;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,6 +15,7 @@ namespace AMMS.Infrastructure.Interfaces
         Task<cost_estimate?> GetByOrderRequestIdAsync(int orderRequestId);
         Task<cost_estimate?> GetByIdAsync(int id);
         Task UpdateAsync(cost_estimate entity);
+        Task<DepositByRequestResponse?> GetDepositByRequestIdAsync(int requestId, CancellationToken ct = default);
 
     }
 }
