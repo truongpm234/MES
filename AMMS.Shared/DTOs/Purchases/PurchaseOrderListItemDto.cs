@@ -7,11 +7,14 @@ using System.Threading.Tasks;
 namespace AMMS.Shared.DTOs.Purchases
 {
     public sealed record PurchaseOrderListItemDto(
-        int PurchaseId,
-        string? Code,
-        string SupplierName,
-        DateTime? CreatedAt,
-        string CreatedByName,
-        decimal TotalQuantity
+        int purchase_id,
+        string? code,
+        string supplier_name,
+        DateTime? created_at,
+        string cretae_by_name,
+        decimal total_quantity,
+        DateTime? eta_date,
+        string status,
+        string? received_by_name
     );
 }
