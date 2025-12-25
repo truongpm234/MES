@@ -9,124 +9,55 @@ namespace AMMS.Application.Helpers
         private static string VND(decimal v)
             => string.Format(new CultureInfo("vi-VN"), "{0:N0} ₫", v);
 
-        public static string QuoteEmail(
-    order_request req,
-    cost_estimate est,
-    string acceptUrl,
-    string rejectUrl)
+        public static string QuoteEmail(order_request req, cost_estimate est, decimal deposit,
+    string acceptUrl, string rejectUrl)
         {
-            string VND(decimal v) =>
-                string.Format(new System.Globalization.CultureInfo("vi-VN"), "{0:N0} ₫", v);
+            var address = $"{req.detail_address}, {req.district}, {req.province}";
+            var delivery = req.delivery_date?.ToString("dd/MM/yyyy") ?? "N/A";
 
             return $@"
-<div style='font-family:Arial,Helvetica,sans-serif;max-width:700px;margin:auto;color:#333'>
+<html>
+  <body style='font-family: Arial;'>
+    <h2>Báo giá đơn hàng in ấn</h2>
 
-  <h2 style='margin-bottom:5px'>BÁO GIÁ ĐƠN HÀNG IN ẤN</h2>
-  <p style='margin-top:0;color:#666'>
-    AMMS System – Báo giá chi tiết
-  </p>
+    <h3>Thông tin người đặt</h3>
+    <ul>
+      <li><b>Tên:</b> {req.customer_name}</li>
+      <li><b>SĐT:</b> {req.customer_phone}</li>
+      <li><b>Email:</b> {req.customer_email}</li>
+      <li><b>Địa chỉ:</b> {address}</li>
+    </ul>
 
-  <hr style='border:none;border-top:1px solid #eee;margin:20px 0'/>
+    <h3>Thông tin giao hàng</h3>
+    <ul>
+      <li><b>Địa chỉ giao:</b> {address}</li>
+      <li><b>Ngày giao dự kiến:</b> {delivery}</li>
+    </ul>
 
-  <table width='100%' style='font-size:14px'>
-    <tr>
-      <td><b>Sản phẩm:</b></td>
-      <td>{req.product_name}</td>
-    </tr>
-    <tr>
-      <td><b>Số lượng:</b></td>
-      <td>{req.quantity}</td>
-    </tr>
-    <tr>
-      <td><b>Giao hàng dự kiến:</b></td>
-      <td>{req.delivery_date:dd/MM/yyyy}</td>
-    </tr>
-  </table>
+    <h3>Thông tin đơn hàng</h3>
+    <ul>
+      <li><b>Sản phẩm:</b> {req.product_name}</li>
+      <li><b>Số lượng:</b> {req.quantity}</li>
+      <li><b>Tổng giá trị đơn hàng:</b> {est.final_total_cost:n0} VND</li>
+      <li><b>Số tiền đặt cọc:</b> {deposit:n0} VND</li>
+    </ul>
 
-  <h3 style='margin-top:30px'>Chi tiết chi phí</h3>
+    <p>
+      <a href='{acceptUrl}' style='padding:10px 16px; background:#16a34a; color:white; text-decoration:none; border-radius:6px;'>
+        Đồng ý & Thanh toán cọc
+      </a>
+      &nbsp;
+      <a href='{rejectUrl}' style='padding:10px 16px; background:#dc2626; color:white; text-decoration:none; border-radius:6px;'>
+        Từ chối báo giá
+      </a>
+    </p>
 
-  <table width='100%' cellpadding='10' cellspacing='0'
-         style='border-collapse:collapse;font-size:14px;border:1px solid #eee'>
-
-    <tr>
-      <td>Giấy ({est.paper_sheets_used} tờ)</td>
-      <td align='right'>{VND(est.paper_cost)}</td>
-    </tr>
-
-    <tr style='background:#fafafa'>
-      <td>Mực in</td>
-      <td align='right'>{VND(est.ink_cost)}</td>
-    </tr>
-
-    <tr>
-      <td>Keo phủ</td>
-      <td align='right'>{VND(est.coating_glue_cost)}</td>
-    </tr>
-
-    <tr style='background:#fafafa'>
-      <td>Keo bồi</td>
-      <td align='right'>{VND(est.mounting_glue_cost)}</td>
-    </tr>
-
-    <tr>
-      <td>Màng cán</td>
-      <td align='right'>{VND(est.lamination_cost)}</td>
-    </tr>
-
-    <tr>
-      <td><b>Tổng vật liệu</b></td>
-      <td align='right'><b>{VND(est.material_cost)}</b></td>
-    </tr>
-
-    <tr style='background:#fafafa'>
-      <td>Khấu hao</td>
-      <td align='right'>{VND(est.overhead_cost)}</td>
-    </tr>
-
-    <tr>
-      <td>Rush</td>
-      <td align='right'>{VND(est.rush_amount)}</td>
-    </tr>
-
-    <tr style='background:#fafafa'>
-      <td>Chiết khấu</td>
-      <td align='right'>-{VND(est.discount_amount)}</td>
-    </tr>
-
-    <tr>
-      <td style='padding-top:15px'><b>TỔNG THANH TOÁN</b></td>
-      <td align='right' style='padding-top:15px'>
-        <span style='font-size:18px;color:#d0021b'><b>{VND(est.final_total_cost)}</b></span>
-      </td>
-    </tr>
-  </table>
-
-  <div style='margin:30px 0;text-align:center'>
-    <a href='{acceptUrl}'
-       style='display:inline-block;padding:12px 22px;
-              background:#28a745;color:white;
-              text-decoration:none;border-radius:4px;
-              font-weight:bold'>
-      ĐỒNG Ý BÁO GIÁ
-    </a>
-
-    <a href='{rejectUrl}'
-       style='display:inline-block;padding:12px 22px;
-              background:#dc3545;color:white;
-              text-decoration:none;border-radius:4px;
-              margin-left:10px'>
-      TỪ CHỐI
-    </a>
-  </div>
-
-  <p style='font-size:13px;color:#666;text-align:center'>
-    Nếu cần chỉnh sửa hoặc tư vấn thêm, vui lòng phản hồi email này.
-  </p>
-
-</div>
-";
+    <p style='color:#666; font-size:12px;'>
+      Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email.
+    </p>
+  </body>
+</html>";
         }
-
 
         public static string AcceptCustomerEmail(
             order_request req,

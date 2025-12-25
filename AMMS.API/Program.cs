@@ -8,6 +8,7 @@ using AMMS.Infrastructure.Interceptors;
 using AMMS.Infrastructure.Interfaces;
 using AMMS.Infrastructure.Repositories;
 using AMMS.Shared.DTOs.Email;
+using AMMS.Shared.DTOs.PayOS;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using System.Text.Json;
@@ -63,6 +64,7 @@ builder.Services.Configure<CloudinaryOptions>(
 builder.Services.Configure<SendGridSettings>(
     builder.Configuration.GetSection("SendGrid"));
 builder.Services.AddSingleton<CostEstimateRoundingInterceptor>();
+builder.Services.Configure<PayOsOptions>(builder.Configuration.GetSection("PayOS"));
 
 
 // Services
@@ -99,7 +101,9 @@ builder.Services.AddScoped<IProductionSchedulingService, ProductionSchedulingSer
 builder.Services.AddScoped<ITaskQrTokenService, TaskQrTokenService>();
 builder.Services.AddScoped<ITaskScanService, TaskScanService>();
 builder.Services.AddScoped<IMaterialPurchaseRequestService, MaterialPurchaseRequestService>();
-
+builder.Services.AddHttpClient<IPayOsService, PayOsService>();
+builder.Services.AddScoped<IPaymentsService, PaymentsService>();
+builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 
 
 // Logging

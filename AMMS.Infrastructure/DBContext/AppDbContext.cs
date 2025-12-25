@@ -58,6 +58,8 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<supplier_material> supplier_materials { get; set; }
 
+    public DbSet<payment> payments { get; set; } = null!;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<bom>(entity =>
@@ -574,6 +576,26 @@ public partial class AppDbContext : DbContext
                   .HasConstraintName("supplier_materials_material_id_fkey");
         });
 
+        modelBuilder.Entity<payment>(entity =>
+        {
+            entity.HasKey(e => e.payment_id).HasName("payments_pkey");
+
+            entity.ToTable("payments", "AMMS_DB");
+
+            entity.Property(e => e.payment_id)
+                  .ValueGeneratedOnAdd();
+
+            entity.Property(e => e.amount).HasColumnType("numeric(18,2)");
+            entity.Property(e => e.payos_raw).HasColumnType("jsonb");
+
+            entity.HasOne(d => d.order_request)
+                  .WithMany(p => p.payments)
+                  .HasForeignKey(d => d.order_request_id)
+                  .OnDelete(DeleteBehavior.Cascade)
+                  .HasConstraintName("fk_payments_order_request");
+
+
+        });
         OnModelCreatingPartial(modelBuilder);
     }
 
