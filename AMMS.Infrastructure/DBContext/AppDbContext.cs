@@ -557,7 +557,9 @@ public partial class AppDbContext : DbContext
         modelBuilder.Entity<payment>(entity =>
         {
             entity.HasKey(e => e.payment_id).HasName("payments_pkey");
-
+            entity.Property(e => e.created_at).HasColumnType("timestamp without time zone");
+            entity.Property(e => e.updated_at).HasColumnType("timestamp without time zone");
+            entity.Property(e => e.paid_at).HasColumnType("timestamp without time zone");
             entity.ToTable("payments", "AMMS_DB");
 
             entity.Property(e => e.payment_id)

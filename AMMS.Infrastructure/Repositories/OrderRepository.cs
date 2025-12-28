@@ -21,24 +21,7 @@ namespace AMMS.Infrastructure.Repositories
         {
             _db = db;
         }
-
-        // ===== Helpers ===================================================
-        private static string ToUtcString(DateTime? dt)
-        {
-            if (dt is null) return "";
-            var v = DateTime.SpecifyKind(dt.Value, DateTimeKind.Utc);
-            return v.ToString("O");
-        }
-
-        private static bool IsNotEnoughStatus(string? status)
-        {
-            if (string.IsNullOrWhiteSpace(status)) return false;
-
-            return status.Equals("Not Enough", StringComparison.OrdinalIgnoreCase)
-                || status.Equals("false", StringComparison.OrdinalIgnoreCase)
-                || status.Equals("0", StringComparison.OrdinalIgnoreCase);
-        }
-
+       
         // ===== MAIN PAGED WITH FULFILL ===================================
         public async Task<List<OrderResponseDto>> GetPagedWithFulfillAsync(int skip, int take, CancellationToken ct = default)
         {
@@ -528,7 +511,6 @@ namespace AMMS.Infrastructure.Repositories
             var hasNext = rawRows.Count > pageSize;
             if (hasNext) rawRows.RemoveAt(rawRows.Count - 1);
 
-            // 4) Convert double → decimal có clamp (không bao giờ overflow)
             static decimal SafeDecimal(double v)
             {
                 if (double.IsNaN(v) || double.IsInfinity(v)) return decimal.MaxValue;
