@@ -234,7 +234,7 @@ namespace AMMS.Infrastructure.Repositories
                 .AsNoTracking()
                 .Where(x => x.customer_email != null)
                 .Where(x => x.process_status != null && EF.Functions.ILike(x.process_status, "accepted%"))
-                .GroupBy(x => x.customer_email!)              // ép non-null để provider dễ dịch
+                .GroupBy(x => x.customer_email!)              
                 .Select(g => new
                 {
                     CustomerEmail = g.Key,
@@ -322,8 +322,8 @@ namespace AMMS.Infrastructure.Repositories
 
             var skip = (page - 1) * pageSize;
 
-            var start = date.ToDateTime(TimeOnly.MinValue);     // 00:00:00
-            var end = start.AddDays(1);                         // next day 00:00:00
+            var start = date.ToDateTime(TimeOnly.MinValue);     
+            var end = start.AddDays(1);                         
 
             var query = _db.order_requests
                 .AsNoTracking()

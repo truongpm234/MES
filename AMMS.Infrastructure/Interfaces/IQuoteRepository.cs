@@ -10,6 +10,7 @@ namespace AMMS.Infrastructure.Interfaces
     public interface IQuoteRepository
     {
         Task AddAsync(quote entity);
+        Task<quote?> GetByIdAsync(int id);
         Task SaveChangesAsync();
     }
 }

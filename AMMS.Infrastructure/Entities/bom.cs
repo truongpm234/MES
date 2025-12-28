@@ -16,6 +16,16 @@ public partial class bom
 
     public decimal? wastage_percent { get; set; }
 
+    public string? material_code { get; set; }
+
+    public string? material_name { get; set; }
+
+    public string? unit { get; set; }
+
+    public decimal? qty_total { get; set; }
+
+    public int? source_estimate_id { get; set; }
+
     public virtual material? material { get; set; }
 
     public virtual order_item? order_item { get; set; }

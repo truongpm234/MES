@@ -12,7 +12,7 @@ namespace AMMS.Infrastructure.Entities
 
         public string provider { get; set; } = "PAYOS";
 
-        public int order_code { get; set; }
+        public long order_code { get; set; }
 
 
         [Column(TypeName = "numeric(18,2)")]

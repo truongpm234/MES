@@ -10,11 +10,16 @@ namespace AMMS.Application.Services
     {
         private readonly IRequestRepository _requestRepo;
         private readonly IOrderRepository _orderRepo;
-
-        public RequestService(IRequestRepository requestRepo, IOrderRepository orderRepo)
+        private readonly ICostEstimateRepository _estimateRepo;
+        private readonly IMaterialRepository _materialRepo;
+        private readonly IBomRepository _bomRepo;
+        public RequestService(IRequestRepository requestRepo, IOrderRepository orderRepo, ICostEstimateRepository estimateRepo, IMaterialRepository materialRepo, IBomRepository bomRepo)
         {
             _requestRepo = requestRepo;
             _orderRepo = orderRepo;
+            _estimateRepo = estimateRepo;
+            _materialRepo = materialRepo;
+            _bomRepo = bomRepo;
         }
 
         private DateTime? ToUnspecified(DateTime? dateTime)
@@ -117,7 +122,6 @@ namespace AMMS.Application.Services
             };
         }
 
-        // 🔥 Convert: gán quote_id vào order
         public async Task<ConvertRequestToOrderResponse> ConvertToOrderAsync(int requestId)
         {
             var req = await _requestRepo.GetByIdAsync(requestId);
@@ -164,7 +168,19 @@ namespace AMMS.Application.Services
                 };
             }
 
-            // 🔍 Kiểm tra tồn kho vật tư
+            // lấy estimate
+            var est = await _estimateRepo.GetByOrderRequestIdAsync(requestId);
+            if (est == null)
+            {
+                return new ConvertRequestToOrderResponse
+                {
+                    Success = false,
+                    Message = "Cost estimate not found for this request",
+                    RequestId = requestId
+                };
+            }
+
+            // kiểm tra tồn kho vật tư
             var hasEnoughStock = await _requestRepo.HasEnoughStockForRequestAsync(requestId);
 
             var orderStatus = hasEnoughStock ? "Scheduled" : "Not enough";
@@ -178,26 +194,98 @@ namespace AMMS.Application.Services
                 delivery_date = req.delivery_date,
                 status = orderStatus,    
                 payment_status = "Unpaid",
-                quote_id = req.quote_id
+                quote_id = req.quote_id,
+                total_amount = est.final_total_cost
             };
 
             await _orderRepo.AddOrderAsync(newOrder);
             await _orderRepo.SaveChangesAsync();
 
+            //tao order_item
             var newItem = new order_item
             {
                 order_id = newOrder.order_id,
                 product_name = req.product_name,
                 quantity = req.quantity ?? 0,
-                design_url = req.design_file_path
+                design_url = req.design_file_path,
+                paper_code = req.paper_code,
+                paper_name = req.paper_name,
+                glue_type = req.coating_type,
+                wave_type = req.wave_type,
+                est_paper_sheets_total = est.sheets_total,
+                est_ink_weight_kg = est.ink_weight_kg,
+                est_coating_glue_weight_kg = est.coating_glue_weight_kg,
+                est_mounting_glue_weight_kg = est.mounting_glue_weight_kg,
+                est_lamination_weight_kg = est.lamination_weight_kg
             };
 
             await _orderRepo.AddOrderItemAsync(newItem);
+            await _orderRepo.SaveChangesAsync();
+
+            material? paperMaterial = null;
+            if (!string.IsNullOrWhiteSpace(req.paper_code))
+            {
+                paperMaterial = await _materialRepo.GetByCodeAsync(req.paper_code!);
+            }
+
+            var qty = (decimal)(newItem.quantity <= 0 ? 1 : newItem.quantity);
+
+            async Task AddBomAsync(string codeBom, string nameBom, string unit, decimal qtyTotal, int? materialId = null)
+            {
+                var bomRow = new bom
+                {
+                    order_item_id = newItem.item_id,
+                    material_id = materialId,
+                    material_code = codeBom,
+                    material_name = nameBom,
+                    unit = unit,
+                    qty_total = qtyTotal,
+                    qty_per_product = qtyTotal / qty,
+                    wastage_percent = null,
+                    source_estimate_id = est.estimate_id
+                };
+
+                await _bomRepo.AddBomAsync(bomRow);
+                await _bomRepo.SaveChangesAsync();
+            }
+
+            if (est.sheets_total > 0)
+            {
+                await AddBomAsync(
+                    codeBom: req.paper_code ?? "PAPER",
+                    nameBom: req.paper_name ?? "Giấy",
+                    unit: "tờ",
+                    qtyTotal: est.sheets_total,
+                    materialId: paperMaterial?.material_id
+                );
+            }
+
+            if (est.ink_weight_kg > 0)
+            {
+                await AddBomAsync("INK", "Mực in", "kg", est.ink_weight_kg);
+            }
+
+            if (est.coating_glue_weight_kg > 0)
+            {
+                await AddBomAsync(req.coating_type ?? "COATING_GLUE", "Keo phủ", "kg", est.coating_glue_weight_kg);
+            }
+
+            if (est.mounting_glue_weight_kg > 0)
+            {
+                var codeBoi = string.IsNullOrWhiteSpace(req.wave_type) ? "MOUNTING_GLUE" : $"BOI_{req.wave_type}";
+                await AddBomAsync(codeBoi, "Keo bồi", "kg", est.mounting_glue_weight_kg);
+            }
+
+            if (est.lamination_weight_kg > 0)
+            {
+                await AddBomAsync("LAMINATION", "Màng cán", "kg", est.lamination_weight_kg);
+            }
+
+            await _orderRepo.SaveChangesAsync();
+
 
             req.order_id = newOrder.order_id;
             await _requestRepo.UpdateAsync(req);
-
-            await _orderRepo.SaveChangesAsync();
             await _requestRepo.SaveChangesAsync();
 
             return new ConvertRequestToOrderResponse

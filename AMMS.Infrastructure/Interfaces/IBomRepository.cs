@@ -1,4 +1,5 @@
 ﻿using AMMS.Infrastructure.Entities;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,7 +10,9 @@ namespace AMMS.Infrastructure.Interfaces
 {
     public interface IBomRepository
     {
-        Task AddRangeAsync(IEnumerable<bom> boms);
+        Task<List<bom>> GetAllAsync();
+        Task<List<bom>> GetByIdAsync(int id);
+        Task AddBomAsync(bom bom);
         Task SaveChangesAsync();
     }
 

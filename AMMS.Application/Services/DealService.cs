@@ -49,6 +49,7 @@ namespace AMMS.Application.Services
 
             var quote = new quote
             {
+                order_request_id = orderRequestId,
                 total_amount = est.final_total_cost,
                 status = "Sent",
                 created_at = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
@@ -66,7 +67,6 @@ namespace AMMS.Application.Services
 
             var acceptUrl = $"{baseUrl}/api/requests/accept-pay?orderRequestId={orderRequestId}&token={token}";
             var rejectUrl = $"{baseUrl}/api/requests/reject-form?orderRequestId={orderRequestId}&token={token}";
-
 
             var html = DealEmailTemplates.QuoteEmail(req, est, deposit, acceptUrl, rejectUrl);
 
@@ -117,22 +117,38 @@ namespace AMMS.Application.Services
                 ?? throw new Exception("Order request not found");
 
             req.process_status = "Rejected";
+
+            if (req.quote_id != null)
+            {
+                var q = await _quoteRepo.GetByIdAsync(req.quote_id.Value);
+                if (q != null) q.status = "Rejected";
+                await _quoteRepo.SaveChangesAsync();
+            }
+
             await _requestRepo.SaveChangesAsync();
 
             cost_estimate? est = null;
-            try
-            {
-                est = await _estimateRepo.GetByOrderRequestIdAsync(orderRequestId);
-            }
-            catch { }
+            try { est = await _estimateRepo.GetByOrderRequestIdAsync(orderRequestId); } catch { }
 
             var safeReason = System.Net.WebUtility.HtmlEncode(reason ?? "");
+            await SendConsultantStatusEmailAsync(req, est, $"KHACH TU CHOI (LY DO: {safeReason})");
+        }
 
-            await SendConsultantStatusEmailAsync(
-                req,
-                est,
-                statusText: $"KHACH TU CHOI (LY DO: {safeReason})"
-            );
+        public async Task MarkAcceptedAsync(int orderRequestId)
+        {
+            var req = await _requestRepo.GetByIdAsync(orderRequestId)
+                ?? throw new Exception("Order request not found");
+
+            req.process_status = "Accepted";
+
+            if (req.quote_id != null)
+            {
+                var q = await _quoteRepo.GetByIdAsync(req.quote_id.Value);
+                if (q != null) q.status = "Accepted";
+                await _quoteRepo.SaveChangesAsync();
+            }
+
+            await _requestRepo.SaveChangesAsync();
         }
 
         public async Task MarkScheduledAsync(int orderRequestId)

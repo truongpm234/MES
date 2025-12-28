@@ -11,20 +11,19 @@ using AMMS.Shared.DTOs.Requests;
 
 namespace AMMS.Application.Services
 {
-    /// <summary>
-    /// Service ước lượng chi phí sản xuất với logic chi tiết
-    /// </summary>
     public class EstimateService : IEstimateService
     {
         private readonly IMaterialRepository _materialRepo;
         private readonly ICostEstimateRepository _estimateRepo;
         private readonly IMachineRepository _machineRepo;
+        private readonly IRequestRepository _requestRepo;
 
-        public EstimateService(IMaterialRepository materialRepo, ICostEstimateRepository costEstimateRepository, IMachineRepository machineRepo)
+        public EstimateService(IMaterialRepository materialRepo, ICostEstimateRepository costEstimateRepository, IMachineRepository machineRepo, IRequestRepository requestRepo)
         {
             _materialRepo = materialRepo;
             _estimateRepo = costEstimateRepository;
             _machineRepo = machineRepo;
+            _requestRepo = requestRepo;
         }
 
         private static TEnum ParseEnum<TEnum>(string value, string fieldName)
@@ -163,7 +162,7 @@ namespace AMMS.Application.Services
 
             // 3.3. (Tùy chọn) Diện tích TỜ GIẤY - Nếu cần cho keo bồi
             // decimal sheetAreaM2 = (req.paper.sheet_width_mm / 1000m) * (req.paper.sheet_height_mm / 1000m);
-            // decimal totalSheetAreaM2 = sheetAreaM2 * req.paper.sheets_with_waste;
+            // decimal totalSheetAreaM2 = sheetAreaM2 * req.paper.sheets_with_waste;SaveCostEstimate
 
             // =====================
             // 4. TÍNH CHI PHÍ GIẤY
@@ -221,6 +220,26 @@ namespace AMMS.Application.Services
                 overheadPercent, overheadCost, baseCost, rushResult, subtotal, discountResult,
                 finalTotal, estimatedFinish, now, totalPrintAreaM2, coatingType);
 
+            var orderReq = await _requestRepo.GetByIdAsync(req.order_request_id);
+            if (orderReq != null)
+            {
+                orderReq.paper_code = req.paper.paper_code;
+                orderReq.product_type = req.product_type?.Trim();
+                orderReq.production_processes = req.production_processes?.Trim();
+                orderReq.coating_type = req.coating_type?.Trim();
+                orderReq.has_lamination = req.has_lamination;
+
+                var paperMaterial = await _materialRepo.GetByCodeAsync(req.paper.paper_code);
+                orderReq.paper_name = paperMaterial?.name;
+                orderReq.coating_type = (req.coating_type ?? orderReq.coating_type);
+
+                if (HasProcess(req.production_processes, "BOI"))
+                    orderReq.wave_type = req.wave_type?.Trim();
+
+                await _requestRepo.UpdateAsync(orderReq);
+                await _requestRepo.SaveChangesAsync();
+            }
+
             return BuildCostResponse(
                 paperCost, req.paper.sheets_with_waste, paperUnitPrice,
                 materialCosts, materialCost, overheadPercent, overheadCost,
@@ -228,7 +247,6 @@ namespace AMMS.Application.Services
                 estimatedFinish, totalPrintAreaM2, coatingType);
         }
 
-        // ==================== PRIVATE HELPER METHODS ====================
 
         private void ValidateRequest(PaperEstimateRequest req)
         {
@@ -241,7 +259,12 @@ namespace AMMS.Application.Services
             if (req.bleed_mm < 0)
                 throw new ArgumentException("bleed_mm must be >= 0");
 
-            // Validate form_product nếu product_type là dạng chung
+            if (HasProcess(req.production_processes, "BOI"))
+            {
+                if (string.IsNullOrWhiteSpace(req.wave_type))
+                    throw new ArgumentException("wave_type is required when production_processes contains 'BOI'");
+            }
+
             if (req.product_type.Equals("HOP_MAU", StringComparison.OrdinalIgnoreCase) ||
                 req.product_type.Equals("VO_HOP_GACH", StringComparison.OrdinalIgnoreCase))
             {
@@ -261,8 +284,12 @@ namespace AMMS.Application.Services
                 throw new ArgumentException("Sheets with waste must be greater than 0");
             if (req.discount_percent < 0 || req.discount_percent > 100)
                 throw new ArgumentException("Discount percent must be between 0 and 100");
+            if (HasProcess(req.production_processes, "BOI"))
+            {
+                if (string.IsNullOrWhiteSpace(req.wave_type))
+                    throw new ArgumentException("wave_type is required when production_processes contains 'BOI'");
+            }
 
-            // Validate form_product nếu product_type là dạng chung
             if (req.product_type.Equals("HOP_MAU", StringComparison.OrdinalIgnoreCase) ||
                 req.product_type.Equals("VO_HOP_GACH", StringComparison.OrdinalIgnoreCase))
             {
@@ -873,6 +900,13 @@ namespace AMMS.Application.Services
             }
 
             return result;
+        }
+        private static bool HasProcess(string productionProcesses, string code)
+        {
+            if (string.IsNullOrWhiteSpace(productionProcesses)) return false;
+            return productionProcesses
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Any(x => string.Equals(x.Trim(), code, StringComparison.OrdinalIgnoreCase));
         }
 
         public async Task<ProcessCostBreakdownResponse> CalculateProcessCostBreakdownAsync(CostEstimateRequest req)

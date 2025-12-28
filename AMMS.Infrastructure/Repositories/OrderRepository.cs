@@ -539,7 +539,7 @@ namespace AMMS.Infrastructure.Repositories
 
             var data = rawRows.Select(x => new MissingMaterialDto
             {
-                material_id = x.MaterialId,          // ✅ ID thật
+                material_id = x.MaterialId,        
                 material_name = x.MaterialName,
                 needed = SafeDecimal(x.NeededD),
                 available = SafeDecimal(x.AvailableD)
@@ -553,8 +553,5 @@ namespace AMMS.Infrastructure.Repositories
                 Data = data
             };
         }
-
-
-
     }
 }

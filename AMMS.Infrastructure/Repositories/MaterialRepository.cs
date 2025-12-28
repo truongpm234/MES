@@ -46,6 +46,12 @@ namespace AMMS.Infrastructure.Repositories
             await _db.SaveChangesAsync();
         }
 
+        public async Task<List<material>> GetMaterialByTypeSongAsync()
+        {
+            return await _db.materials
+                .Where(m => m.main_material_type != null && m.main_material_type == "SÓNG")
+                .ToListAsync();
+        }
         public async Task<PagedResultLite<MaterialShortageDto>> GetShortageForAllOrdersPagedAsync(
      int page,
      int pageSize,

@@ -104,7 +104,7 @@ builder.Services.AddScoped<IMaterialPurchaseRequestService, MaterialPurchaseRequ
 builder.Services.AddHttpClient<IPayOsService, PayOsService>();
 builder.Services.AddScoped<IPaymentsService, PaymentsService>();
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
-
+builder.Services.AddScoped<IBomRepository, BomRepository>();
 
 // Logging
 builder.Logging.ClearProviders();

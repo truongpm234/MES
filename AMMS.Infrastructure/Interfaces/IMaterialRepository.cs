@@ -16,6 +16,7 @@ namespace AMMS.Infrastructure.Interfaces
         Task<material> GetByIdAsync(int id);
         Task UpdateAsync(material entity);
         Task SaveChangeAsync();
+        Task<List<material>> GetMaterialByTypeSongAsync();
         Task<PagedResultLite<MaterialShortageDto>> GetShortageForAllOrdersPagedAsync(
             int page, int pageSize, CancellationToken ct = default);
     }

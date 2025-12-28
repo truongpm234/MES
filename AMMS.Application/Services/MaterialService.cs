@@ -37,11 +37,18 @@ namespace AMMS.Application.Services
             await _materialRepository.UpdateAsync(material);
             await _materialRepository.SaveChangeAsync();
         }
+
         public Task<List<string>> GetAllPaperTypeAsync()
         {
             var result = Enum.GetNames(typeof(PaperCode)).ToList();
             return Task.FromResult(result);
         }
+
+        public async Task<List<material>> GetMaterialByTypeSongAsync()
+        {
+            return await _materialRepository.GetMaterialByTypeSongAsync();
+        }
+
         public Task<PagedResultLite<MaterialShortageDto>> GetShortageForAllOrdersPagedAsync(
             int page, int pageSize, CancellationToken ct = default) => 
             _materialRepository.GetShortageForAllOrdersPagedAsync(page, pageSize, ct);

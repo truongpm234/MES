@@ -50,5 +50,12 @@ namespace AMMS.API.Controllers
             var result = await _materialService.GetShortageForAllOrdersPagedAsync(page, pageSize, ct);
             return Ok(result);
         }
+
+        [HttpGet("get-material-by-type-song")]
+        public async Task<IActionResult> GetMaterialByTypeSong()
+        {
+            var materials = await _materialService.GetMaterialByTypeSongAsync();
+            return Ok(materials);
+        }
     }
 }

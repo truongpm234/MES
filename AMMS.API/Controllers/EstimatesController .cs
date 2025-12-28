@@ -40,12 +40,6 @@ namespace AMMS.API.Controllers
             return NoContent();
         }
 
-        [HttpPost("process-cost-breakdown")]
-        public async Task<IActionResult> ProcessCostBreakdown([FromBody] CostEstimateRequest req)
-        {
-            var res = await _service.CalculateProcessCostBreakdownAsync(req);
-            return Ok(res);
-        }
         [HttpGet("deposit/by-request/{requestId:int}")]
         public async Task<IActionResult> GetDepositByRequestId(int requestId, CancellationToken ct)
         {

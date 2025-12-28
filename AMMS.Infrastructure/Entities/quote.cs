@@ -8,6 +8,8 @@ public partial class quote
 {
     public int quote_id { get; set; }
 
+    public int? order_request_id { get; set; }
+
     public int? customer_id { get; set; }
 
     public int? consultant_id { get; set; }
@@ -17,6 +19,8 @@ public partial class quote
     public string? status { get; set; }
 
     public DateTime created_at { get; set; } = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
+
+    public virtual order_request? order_request { get; set; }
 
     public virtual user? consultant { get; set; }
 

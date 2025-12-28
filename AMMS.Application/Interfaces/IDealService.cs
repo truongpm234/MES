@@ -16,5 +16,6 @@ namespace AMMS.Application.Interfaces
         Task SendConsultantStatusEmailAsync(order_request req, cost_estimate? est, string statusText, decimal? paidAmount = null, DateTime? paidAt = null);
         Task NotifyConsultantPaidAsync(int orderRequestId, decimal paidAmount, DateTime paidAt);
         Task NotifyCustomerPaidAsync(int orderRequestId, decimal paidAmount, DateTime paidAt);
+        Task MarkAcceptedAsync(int orderRequestId);
     }
 }

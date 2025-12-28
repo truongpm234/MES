@@ -351,6 +351,10 @@ public partial class AppDbContext : DbContext
             entity.HasOne(d => d.customer).WithMany(p => p.quotes)
                 .HasForeignKey(d => d.customer_id)
                 .HasConstraintName("quotes_customer_id_fkey");
+            entity.HasOne(q => q.order_request)
+                .WithMany()
+                .HasForeignKey(q => q.order_request_id)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<role>(entity =>
