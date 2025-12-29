@@ -199,7 +199,6 @@ public partial class AppDbContext : DbContext
         modelBuilder.Entity<order_item>(entity =>
         {
             entity.HasKey(e => e.item_id).HasName("order_items_pkey");
-            entity.Property(e => e.paper_type).HasMaxLength(100);
             entity.Property(e => e.product_name).HasMaxLength(200);
             entity.HasOne(d => d.order).WithMany(p => p.order_items)
                 .HasForeignKey(d => d.order_id)

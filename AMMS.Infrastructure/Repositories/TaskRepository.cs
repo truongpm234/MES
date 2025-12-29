@@ -31,5 +31,12 @@ namespace AMMS.Infrastructure.Repositories
                 .Where(x => x.prod_id == prodId && x.seq_num > currentSeqNum)
                 .OrderBy(x => x.seq_num)
                 .FirstOrDefaultAsync();
+        public Task<task?> GetPrevTaskAsync(int prodId, int seqNum)
+        {
+            return _db.tasks
+                .Where(x => x.prod_id == prodId && x.seq_num < seqNum)
+                .OrderByDescending(x => x.seq_num)
+                .FirstOrDefaultAsync();
+        }
     }
 }

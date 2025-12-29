@@ -71,47 +71,41 @@ namespace AMMS.Application.Services
         }
         public async Task<PaperEstimateResponse> EstimatePaperAsync(PaperEstimateRequest req)
         {
-            // =====================
-            // 1. VALIDATION
-            // =====================
             ValidateRequest(req);
 
-            // =====================
-            // 2. LẤY THÔNG TIN GIẤY
-            // =====================
             var paper = await GetPaperMaterial(req.paper_code);
             int sheetW = paper.sheet_width_mm!.Value;
             int sheetH = paper.sheet_height_mm!.Value;
 
-            // =====================
-            // 3. RESOLVE PRODUCT TYPE
-            // =====================
             var productTypeCode = ResolveProductTypeCode(req.product_type, req.form_product);
 
-            // =====================
-            // 4. TÍNH KÍCH THƯỚC TRIỂN KHAI
-            // =====================
             var (printW, printH) = CalculatePrintSize(req, productTypeCode);
 
-            // =====================
-            // 5. TÍNH N-UP
-            // =====================
             int nUp = CalculateNUp(sheetW, sheetH, printW, printH);
 
-            // =====================
-            // 6. TÍNH SỐ TỜ CƠ BẢN
-            // =====================
             int sheetsBase = (int)Math.Ceiling(req.quantity / (decimal)nUp);
 
-            // =====================
-            // 7. TÍNH HAO HỤT THEO CÔNG ĐOẠN
-            // =====================
             var wasteResult = CalculateWasteWithSmartScaling(req, sheetsBase, productTypeCode);
 
-            // =====================
-            // 8. CẢNH BÁO ĐƠN NHỎ
-            // =====================
             string? warningMessage = GenerateWarningMessage(sheetsBase, wasteResult.TotalWaste);
+
+            var orderReq = await _requestRepo.GetByIdAsync(req.order_request_id);
+            if (orderReq != null)
+            {
+                orderReq.product_length_mm = req.length_mm;
+                orderReq.product_width_mm = req.width_mm;
+                orderReq.product_height_mm = req.height_mm;
+
+                orderReq.glue_tab_mm = req.glue_tab_mm;
+                orderReq.bleed_mm = req.bleed_mm;
+                orderReq.is_one_side_box = req.is_one_side_box;
+
+                orderReq.print_width_mm = printW;
+                orderReq.print_height_mm = printH;
+
+                await _requestRepo.UpdateAsync(orderReq);
+                await _requestRepo.SaveChangesAsync();
+            }
 
             return new PaperEstimateResponse
             {

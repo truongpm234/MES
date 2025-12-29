@@ -33,9 +33,13 @@ public partial class order_item
 
     public decimal? est_lamination_weight_kg { get; set; }
 
-    public string? paper_type { get; set; }
+    public string? production_process { get; set; }
 
-    public string? post_processing { get; set; }
+    public int? length_mm { get; set; }
+
+    public int? width_mm { get; set; }
+
+    public int? height_mm { get; set; }
 
     public string? design_url { get; set; }
 

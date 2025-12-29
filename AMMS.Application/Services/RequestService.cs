@@ -193,7 +193,6 @@ namespace AMMS.Application.Services
                     var hasEnoughStock = await _requestRepo.HasEnoughStockForRequestAsync(requestId);
                     var orderStatus = hasEnoughStock ? "Scheduled" : "Not enough";
 
-                    // 1) Create order with TEMP unique code (GUID)
                     var newOrder = new order
                     {
                         code = "TMP-" + Guid.NewGuid().ToString("N"),
@@ -206,13 +205,11 @@ namespace AMMS.Application.Services
                     };
 
                     await _orderRepo.AddOrderAsync(newOrder);
-                    await _orderRepo.SaveChangesAsync(); // get order_id
+                    await _orderRepo.SaveChangesAsync(); 
 
-                    // 2) Update code based on order_id (unique)
                     newOrder.code = $"ORD-{newOrder.order_id:00000}";
                     await _orderRepo.SaveChangesAsync();
 
-                    // 3) Create order_item
                     var newItem = new order_item
                     {
                         order_id = newOrder.order_id,
@@ -220,6 +217,7 @@ namespace AMMS.Application.Services
                         quantity = req.quantity ?? 0,
                         design_url = req.design_file_path,
                         paper_code = req.paper_code,
+                        production_process = req.production_processes,
                         paper_name = req.paper_name,
                         glue_type = req.coating_type,
                         wave_type = req.wave_type,
@@ -227,7 +225,10 @@ namespace AMMS.Application.Services
                         est_ink_weight_kg = est.ink_weight_kg,
                         est_coating_glue_weight_kg = est.coating_glue_weight_kg,
                         est_mounting_glue_weight_kg = est.mounting_glue_weight_kg,
-                        est_lamination_weight_kg = est.lamination_weight_kg
+                        est_lamination_weight_kg = est.lamination_weight_kg,
+                        height_mm = req.product_height_mm,
+                        length_mm = req.product_length_mm,
+                        width_mm = req.product_width_mm
                     };
 
                     await _orderRepo.AddOrderItemAsync(newItem);

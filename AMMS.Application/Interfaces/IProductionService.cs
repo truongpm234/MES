@@ -12,7 +12,9 @@ namespace AMMS.Application.Interfaces
     {
         Task<NearestDeliveryResponse> GetNearestDeliveryAsync();
         Task<List<string>> GetAllProcessTypeAsync();
-
+        Task<ProductionProgressResponse> GetProgressAsync(int prodId);
         Task<PagedResultLite<ProducingOrderCardDto>> GetProducingOrdersAsync(int page, int pageSize, CancellationToken ct = default);
+        Task<ProductionDetailDto?> GetProductionDetailAsync(int prodId, CancellationToken ct = default);
+        Task<ProductionWasteReportDto?> GetProductionWasteAsync(int prodId, CancellationToken ct = default);
     }
 }

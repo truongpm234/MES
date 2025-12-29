@@ -1,0 +1,18 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace AMMS.Shared.DTOs.Productions
+{
+    public sealed class ProductTypeProcessStepDto
+    {
+        public int process_id { get; set; }
+        public int seq_num { get; set; }
+        public string process_name { get; set; } = "";
+        public string? process_code { get; set; }
+        public string? machine { get; set; }
+    }
+}
+

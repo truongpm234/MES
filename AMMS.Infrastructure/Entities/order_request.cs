@@ -56,6 +56,22 @@ public partial class order_request
 
     public int? quote_id { get; set; }
 
+    public int? product_length_mm { get; set; }
+
+    public int? product_width_mm { get; set; }
+
+    public int? product_height_mm { get; set; }
+
+    public int? glue_tab_mm { get; set; }
+
+    public int? bleed_mm { get; set; }
+
+    public bool? is_one_side_box { get; set; }
+
+    public int? print_width_mm { get; set; }
+
+    public int? print_height_mm { get; set; }
+
     public virtual quote? quote { get; set; }
 
     public virtual order? order { get; set; }

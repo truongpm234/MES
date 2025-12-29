@@ -411,7 +411,6 @@ namespace AMMS.Infrastructure.Repositories
             if (item != null)
             {
                 var parts = new List<string>();
-                if (!string.IsNullOrWhiteSpace(item.paper_type)) parts.Add($"Giấy: {item.paper_type}");
                 if (parts.Count > 0) specification = string.Join(" | ", parts);
             }
 

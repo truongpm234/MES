@@ -8,6 +8,6 @@ namespace AMMS.Application.Interfaces
 {
     public interface IProductionSchedulingService
     {
-        Task<int> ScheduleOrderAsync(int orderId, int productTypeId, int? managerId = null);
+        Task<int> ScheduleOrderAsync(int orderId, int productTypeId, string? productionProcessCsv, int? managerId = null);
     }
 }

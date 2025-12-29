@@ -27,20 +27,10 @@ namespace AMMS.Application.Services
             _taskRepo = taskRepo;
         }
 
-        private static bool IsManual(machine? m, string? stepMachine)
+        public async Task<int> ScheduleOrderAsync(int orderId, int productTypeId, string? productionProcessCsv, int? managerId = 3)
         {
-            if (string.IsNullOrWhiteSpace(stepMachine)) return true; 
+            var selected = ParseProcessCsv(productionProcessCsv);
 
-            if (m == null) return true; 
-
-            var note = (m.note ?? "");
-            return note.Contains("thủ công", StringComparison.OrdinalIgnoreCase)
-                || note.Contains("thu cong", StringComparison.OrdinalIgnoreCase);
-        }
-
-        public async Task<int> ScheduleOrderAsync(int orderId, int productTypeId, int? managerId = null)
-        {
-            // 1) create production
             var prod = new production
             {
                 code = $"PRD-{DateTime.UtcNow:yyyyMMddHHmmss}",
@@ -52,14 +42,24 @@ namespace AMMS.Application.Services
             };
 
             await _prodRepo.AddAsync(prod);
-            await _prodRepo.SaveChangesAsync(); 
+            await _prodRepo.SaveChangesAsync();
 
             // 2) load routing steps
             var steps = await _ptpRepo.GetActiveByProductTypeIdAsync(productTypeId);
             if (steps == null || steps.Count == 0)
                 throw new Exception("No routing (product_type_process) found. Seed first.");
 
-            // 3) create tasks
+            if (selected.Count > 0)
+            {
+                steps = steps
+                    .Where(s => !string.IsNullOrWhiteSpace(s.process_code) && selected.Contains(s.process_code!))
+                    .OrderBy(s => s.seq_num)
+                    .ToList();
+
+                if (steps.Count == 0)
+                    throw new Exception("Selected production_process does not match any product_type_process.process_code");
+            }
+
             var tasks = new List<task>();
             var firstSeq = steps.Min(x => x.seq_num);
 
@@ -68,9 +68,7 @@ namespace AMMS.Application.Services
                 machine? m = null;
 
                 if (!string.IsNullOrWhiteSpace(s.machine))
-                {
                     m = await _machineRepo.FindMachineByProcess(s.machine);
-                }
 
                 var printersNeeded = m?.quantity ?? 1;
                 var manual = IsManual(m, s.machine);
@@ -92,7 +90,7 @@ namespace AMMS.Application.Services
                     seq_num = s.seq_num,
                     name = $"{s.process_name} {noteSuffix}",
                     status = status,
-                    machine = taskMachine,   
+                    machine = taskMachine,
                     start_time = null,
                     end_time = null
                 });
@@ -102,6 +100,25 @@ namespace AMMS.Application.Services
             await _taskRepo.SaveChangesAsync();
 
             return prod.prod_id;
+        }
+        private static bool IsManual(machine? m, string? stepMachine)
+        {
+            if (string.IsNullOrWhiteSpace(stepMachine)) return true;
+            if (m == null) return true;
+
+            var note = (m.note ?? "");
+            return note.Contains("thủ công", StringComparison.OrdinalIgnoreCase)
+                || note.Contains("thu cong", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static HashSet<string> ParseProcessCsv(string? csv)
+        {
+            if (string.IsNullOrWhiteSpace(csv)) return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            return csv.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(x => x.Trim())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
         }
     }
 }

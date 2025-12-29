@@ -4,6 +4,8 @@ namespace AMMS.Shared.DTOs.Estimates
 {
     public class PaperEstimateRequest
     {
+        public int order_request_id { get; set; }
+
         public string paper_code { get; set; } = null!;
 
         public int quantity { get; set; }

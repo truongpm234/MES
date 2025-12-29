@@ -151,14 +151,6 @@ namespace AMMS.Application.Services
             await _requestRepo.SaveChangesAsync();
         }
 
-        public async Task MarkScheduledAsync(int orderRequestId)
-        {
-            var req = await _requestRepo.GetByIdAsync(orderRequestId)
-                ?? throw new Exception("Order request not found");
-
-            req.process_status = "Scheduled";
-            await _requestRepo.SaveChangesAsync();
-        }
         public async Task SendConsultantStatusEmailAsync(
     order_request req,
     cost_estimate? est,

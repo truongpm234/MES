@@ -19,18 +19,21 @@ namespace AMMS.API.Controllers
         private readonly IRequestService _service;
         private readonly IDealService _dealService;
         private readonly IPaymentsService _paymentService;
+        private readonly IProductionSchedulingService _schedulingService;
         private readonly AppDbContext _db;
 
         public RequestsController(
             IRequestService service,
             IDealService dealService,
             IPaymentsService paymentService,
-            AppDbContext db)
+            AppDbContext db,
+            IProductionSchedulingService schedulingService)
         {
             _service = service;
             _dealService = dealService;
             _paymentService = paymentService;
             _db = db;
+            _schedulingService = schedulingService;
         }
 
         [HttpPost]
@@ -74,14 +77,6 @@ namespace AMMS.API.Controllers
             return Ok(result);
         }
 
-        [HttpPost("convert-to-order-by-{id:int}")]
-        public async Task<IActionResult> ConvertToOrder(int id)
-        {
-            var result = await _service.ConvertToOrderAsync(id);
-            if (!result.Success) return BadRequest(result);
-            return Ok(result);
-        }
-
         [HttpPost("send-deal")]
         public async Task<IActionResult> SendDealEmail([FromBody] SendDealEmailRequest req)
         {
@@ -104,8 +99,6 @@ namespace AMMS.API.Controllers
             }
         }
 
-        // Người dùng bấm “đồng ý” -> redirect qua PayOS checkout.
-        // Webhook KHÔNG gọi từ đây; PayOS sẽ gọi webhook sau khi trả tiền thành công.
         [HttpGet("accept-pay")]
         public async Task<IActionResult> AcceptPay([FromQuery] int orderRequestId, [FromQuery] string token)
         {
@@ -286,13 +279,47 @@ namespace AMMS.API.Controllers
                 var convert = await _service.ConvertToOrderAsync(orderRequestId);
                 if (!convert.Success)
                     return (false, "ConvertToOrder failed: " + convert.Message);
+
+                // ✅ Auto schedule production
+                try
+                {
+                    var item = await _db.order_items
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(x => x.item_id == convert.OrderItemId, ct);
+
+                    var req = await _db.order_requests
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(x => x.order_request_id == orderRequestId, ct);
+
+                    int productTypeId = 0;
+
+                    productTypeId = await _db.product_types.Where(x => x.code == req.product_type).Select(x => x.product_type_id).FirstAsync(ct);
+
+                    if (productTypeId <= 0)
+                        return (false, "Auto schedule failed: productTypeId missing/invalid");
+
+                    var prodId = await _schedulingService.ScheduleOrderAsync(
+                        orderId: convert.OrderId!.Value,
+                        productTypeId: productTypeId,
+                        productionProcessCsv: item?.production_process,
+                        managerId: 3
+                    );
+
+                    Console.WriteLine($"✅ Auto scheduled production: prod_id={prodId} for order_id={convert.OrderId}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("❌ Auto schedule failed: " + ex);
+                    return (true, "Processed paid OK + converted, but schedule failed: " + ex.Message);
+                }
+
                 Console.WriteLine($"Convert result: success={convert.Success}, msg={convert.Message}, orderId={convert.OrderId}");
 
                 return (true, "Processed paid OK + converted");
 
             }
             catch (DbUpdateException dbEx) when (dbEx.InnerException is PostgresException pg && pg.SqlState == "23505")
-            {               
+            {
             }
 
             try

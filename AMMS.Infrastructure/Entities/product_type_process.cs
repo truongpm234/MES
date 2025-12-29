@@ -15,6 +15,8 @@ public partial class product_type_process
 
     public string process_name { get; set; } = null!;
 
+    public string? process_code { get; set; }
+
     public string? machine { get; set; }
 
     public bool? is_active { get; set; }
