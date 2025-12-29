@@ -465,74 +465,78 @@ namespace AMMS.Infrastructure.Repositories
             NormalizePaging(ref page, ref pageSize);
             var skip = (page - 1) * pageSize;
 
-            // 1) Line-level (đọc numeric về double để né Npgsql decimal overflow)
+            // ✅ Line-level: ép precision ngay tại DB để tránh SUM ra numeric "vô hạn"
             var lineQuery =
                 from oi in _db.order_items.AsNoTracking()
+                join o in _db.orders.AsNoTracking() on oi.order_id equals o.order_id
                 join b in _db.boms.AsNoTracking() on oi.item_id equals b.order_item_id
                 join m in _db.materials.AsNoTracking() on b.material_id equals m.material_id
                 select new
                 {
                     MaterialId = m.material_id,
                     MaterialName = m.name,
+                    Unit = m.unit,
 
-                    AvailableD = (double)(m.stock_qty ?? 0m),
+                    // stock_qty là numeric(10,2) => giữ 2 số lẻ
+                    Available = Math.Round((decimal)(m.stock_qty ?? 0m), 2),
 
-                    NeededLineD =
-                        (double)oi.quantity
-                        * (double)(b.qty_per_product ?? 0m)
-                        * (1.0 + ((double)(b.wastage_percent ?? 0m) / 100.0))
+                    // ngày yêu cầu: lấy delivery_date gần nhất
+                    RequestDate = o.delivery_date,
+
+                    // ✅ NeededLine: ROUND lại (ví dụ 4 số lẻ) để SUM không phình precision
+                    NeededLine = Math.Round(
+                        (decimal)oi.quantity
+                        * (decimal)(b.qty_per_product ?? 0m)
+                        * (1m + ((decimal)(b.wastage_percent ?? 0m) / 100m)),
+                        4
+                    )
                 };
 
-            // 2) Aggregate (EF dịch được)
-            var aggQuery =
-                from x in lineQuery
-                group x by new { x.MaterialId, x.MaterialName } into g
-                select new
+            // ✅ Aggregate: tiếp tục ROUND ở SUM (và kết quả cuối) để không overflow
+            var query = lineQuery
+                .GroupBy(x => new { x.MaterialId, x.MaterialName, x.Unit })
+                .Select(g => new
                 {
                     g.Key.MaterialId,
                     g.Key.MaterialName,
-                    NeededD = g.Sum(t => t.NeededLineD),
-                    AvailableD = g.Max(t => t.AvailableD)
-                };
+                    g.Key.Unit,
 
-            // 3) Chỉ lấy NVL thiếu
-            var filtered =
-                from x in aggQuery
-                where x.NeededD > x.AvailableD
-                orderby (x.NeededD - x.AvailableD) descending
-                select x;
+                    Needed = Math.Round(g.Sum(t => t.NeededLine), 4),
+                    Available = Math.Round(g.Max(t => t.Available), 2),
+                    RequestDate = g.Min(t => t.RequestDate)
+                })
+                .Select(x => new MissingMaterialDto
+                {
+                    material_id = x.MaterialId,
+                    material_name = x.MaterialName,
+                    unit = x.Unit,
 
-            var rawRows = await filtered
+                    needed = x.Needed,
+                    available = x.Available,
+
+                    // thiếu = needed - available
+                    quantity = Math.Round(x.Needed - x.Available, 4),
+                    request_date = x.RequestDate
+                })
+                .Where(x => x.quantity > 0m)
+                .OrderByDescending(x => x.quantity);
+
+            var rows = await query
                 .Skip(skip)
                 .Take(pageSize + 1)
                 .ToListAsync(ct);
 
-            var hasNext = rawRows.Count > pageSize;
-            if (hasNext) rawRows.RemoveAt(rawRows.Count - 1);
-
-            static decimal SafeDecimal(double v)
-            {
-                if (double.IsNaN(v) || double.IsInfinity(v)) return decimal.MaxValue;
-                if (v > (double)decimal.MaxValue) return decimal.MaxValue;
-                if (v < (double)decimal.MinValue) return decimal.MinValue;
-                return (decimal)v;
-            }
-
-            var data = rawRows.Select(x => new MissingMaterialDto
-            {
-                material_id = x.MaterialId,        
-                material_name = x.MaterialName,
-                needed = SafeDecimal(x.NeededD),
-                available = SafeDecimal(x.AvailableD)
-            }).ToList();
+            var hasNext = rows.Count > pageSize;
+            if (hasNext) rows.RemoveAt(rows.Count - 1);
 
             return new PagedResultLite<MissingMaterialDto>
             {
                 Page = page,
                 PageSize = pageSize,
                 HasNext = hasNext,
-                Data = data
+                Data = rows
             };
         }
+
     }
 }
