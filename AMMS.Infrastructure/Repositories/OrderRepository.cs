@@ -233,9 +233,8 @@ namespace AMMS.Infrastructure.Repositories
                     quantity = o.FirstItem?.quantity ?? 0,
                     created_at = ToUtcString(o.order_date),
                     delivery_date = ToUtcString(o.delivery_date),
-
+                    status = o.Status,
                     can_fulfill = canFulfill,
-
                     missing_materials = canFulfill == false
                         ? (missingMaterials ?? new List<MissingMaterialDto>())
                         : null
@@ -245,7 +244,6 @@ namespace AMMS.Infrastructure.Repositories
 
 
 
-        // ===== CRUD & OTHER METHODS ======================================
         public async Task AddOrderAsync(order entity)
         {
             await _db.orders.AddAsync(entity);
@@ -465,73 +463,93 @@ namespace AMMS.Infrastructure.Repositories
             NormalizePaging(ref page, ref pageSize);
             var skip = (page - 1) * pageSize;
 
-            // 1) Line-level (đọc numeric về double để né Npgsql decimal overflow)
-            var lineQuery =
+            // ✅ Lấy line-level nhưng dùng double để tránh Npgsql overflow khi đọc numeric cực lớn
+            var lines = await (
                 from oi in _db.order_items.AsNoTracking()
+                join o in _db.orders.AsNoTracking() on oi.order_id equals o.order_id
                 join b in _db.boms.AsNoTracking() on oi.item_id equals b.order_item_id
                 join m in _db.materials.AsNoTracking() on b.material_id equals m.material_id
                 select new
                 {
-                    MaterialId = m.material_id,
-                    MaterialName = m.name,
+                    m.material_id,
+                    material_name = m.name,
+                    unit = m.unit,
+                    request_date = o.delivery_date,
 
-                    AvailableD = (double)(m.stock_qty ?? 0m),
+                    available = (double)(m.stock_qty ?? 0m),
+                    unit_price = (double)(m.cost_price ?? 0m),
 
-                    NeededLineD =
+                    needed_line =
                         (double)oi.quantity
                         * (double)(b.qty_per_product ?? 0m)
                         * (1.0 + ((double)(b.wastage_percent ?? 0m) / 100.0))
-                };
+                }
+            ).ToListAsync(ct);
 
-            // 2) Aggregate (EF dịch được)
-            var aggQuery =
-                from x in lineQuery
-                group x by new { x.MaterialId, x.MaterialName } into g
-                select new
-                {
-                    g.Key.MaterialId,
-                    g.Key.MaterialName,
-                    NeededD = g.Sum(t => t.NeededLineD),
-                    AvailableD = g.Max(t => t.AvailableD)
-                };
-
-            // 3) Chỉ lấy NVL thiếu
-            var filtered =
-                from x in aggQuery
-                where x.NeededD > x.AvailableD
-                orderby (x.NeededD - x.AvailableD) descending
-                select x;
-
-            var rawRows = await filtered
-                .Skip(skip)
-                .Take(pageSize + 1)
-                .ToListAsync(ct);
-
-            var hasNext = rawRows.Count > pageSize;
-            if (hasNext) rawRows.RemoveAt(rawRows.Count - 1);
-
-            static decimal SafeDecimal(double v)
+            // ✅ Group + tính toán trong memory (tránh SQL numeric vượt decimal)
+            static decimal SafeToDecimal(double v, int round)
             {
-                if (double.IsNaN(v) || double.IsInfinity(v)) return decimal.MaxValue;
-                if (v > (double)decimal.MaxValue) return decimal.MaxValue;
-                if (v < (double)decimal.MinValue) return decimal.MinValue;
-                return (decimal)v;
+                if (double.IsNaN(v) || double.IsInfinity(v)) return 0m;
+                // clamp về range decimal
+                var max = (double)decimal.MaxValue;
+                if (v > max) return decimal.MaxValue;
+                if (v < -max) return decimal.MinValue;
+                return Math.Round((decimal)v, round);
             }
 
-            var data = rawRows.Select(x => new MissingMaterialDto
+            static decimal SafeMul(decimal a, decimal b)
             {
-                material_id = x.MaterialId,        
-                material_name = x.MaterialName,
-                needed = SafeDecimal(x.NeededD),
-                available = SafeDecimal(x.AvailableD)
-            }).ToList();
+                try { return a * b; }
+                catch (OverflowException) { return decimal.MaxValue; }
+            }
+
+            var grouped = lines
+                .GroupBy(x => new { x.material_id, x.material_name, x.unit })
+                .Select(g =>
+                {
+                    var neededD = g.Sum(t => t.needed_line);
+                    var availableD = g.Max(t => t.available);
+                    var requestDate = g.Min(t => t.request_date);
+                    var unitPriceD = g.Max(t => t.unit_price);
+
+                    var needed = SafeToDecimal(neededD, 4);
+                    var available = SafeToDecimal(availableD, 4);
+                    var missing = needed - available;
+                    if (missing < 0) missing = 0;
+
+                    var unitPrice = SafeToDecimal(unitPriceD, 2);
+                    var totalPrice = SafeMul(missing, unitPrice);
+                    totalPrice = Math.Round(totalPrice, 2);
+
+                    return new MissingMaterialDto
+                    {
+                        material_id = g.Key.material_id,
+                        material_name = g.Key.material_name,
+                        unit = g.Key.unit,
+                        request_date = requestDate,
+
+                        needed = needed,
+                        available = available,
+                        quantity = missing,
+
+                        total_price = totalPrice
+                    };
+                })
+                .Where(x => x.quantity > 0m)
+                .OrderByDescending(x => x.quantity)
+                .ToList();
+
+            // ✅ paging sau khi đã group
+            var pageRows = grouped.Skip(skip).Take(pageSize + 1).ToList();
+            var hasNext = pageRows.Count > pageSize;
+            if (hasNext) pageRows.RemoveAt(pageRows.Count - 1);
 
             return new PagedResultLite<MissingMaterialDto>
             {
                 Page = page,
                 PageSize = pageSize,
                 HasNext = hasNext,
-                Data = data
+                Data = pageRows
             };
         }
     }
