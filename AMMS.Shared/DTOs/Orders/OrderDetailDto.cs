@@ -29,6 +29,7 @@ namespace AMMS.Shared.DTOs.Orders
         public int quantity { get; set; }
 
         // Lịch sản xuất
+        public int? production_id { get; set; }
         public DateTime? production_start_date { get; set; }
         public DateTime? production_end_date { get; set; }
         public string approver_name { get; set; } = string.Empty;

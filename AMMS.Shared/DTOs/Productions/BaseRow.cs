@@ -18,6 +18,8 @@ namespace AMMS.Shared.DTOs.Productions
 
         public int? product_type_id { get; set; }
 
+        public string? status { get; set; }
+
         public string? customer_name { get; set; }
 
         public string? first_item_product_name { get; set; }

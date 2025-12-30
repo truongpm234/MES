@@ -194,6 +194,11 @@ public partial class AppDbContext : DbContext
             entity.HasOne(d => d.quote).WithMany(p => p.orders)
                 .HasForeignKey(d => d.quote_id)
                 .HasConstraintName("orders_quote_id_fkey");
+            entity.HasOne(o => o.production)
+                .WithMany()
+                .HasForeignKey(o => o.production_id)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("fk_orders_production");
         });
 
         modelBuilder.Entity<order_item>(entity =>
@@ -390,7 +395,6 @@ public partial class AppDbContext : DbContext
                 .HasConstraintName("stock_moves_purchase_id_fkey");
         });
 
-
         modelBuilder.Entity<supplier>(entity =>
         {
             entity.HasKey(e => e.supplier_id).HasName("suppliers_pkey");
@@ -572,8 +576,6 @@ public partial class AppDbContext : DbContext
                   .HasForeignKey(d => d.order_request_id)
                   .OnDelete(DeleteBehavior.Cascade)
                   .HasConstraintName("fk_payments_order_request");
-
-
         });
         OnModelCreatingPartial(modelBuilder);
     }

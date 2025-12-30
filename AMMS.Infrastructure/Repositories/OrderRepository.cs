@@ -332,7 +332,7 @@ namespace AMMS.Infrastructure.Repositories
                 .AsNoTracking()
                 .Include(o => o.order_items)
                 .Include(o => o.productions)
-                    .ThenInclude(p => p.manager)
+                .ThenInclude(p => p.manager)
                 .FirstOrDefaultAsync(o => o.order_id == orderId, ct);
 
             if (order == null) return null;
@@ -350,7 +350,6 @@ namespace AMMS.Infrastructure.Repositories
             }
 
             var item = order.order_items.OrderBy(i => i.item_id).FirstOrDefault();
-
             string customerName = string.Empty;
             string? customerEmail = null;
             string? customerPhone = null;
@@ -420,27 +419,21 @@ namespace AMMS.Infrastructure.Repositories
                 payment_status = order.payment_status ?? "Unpaid",
                 order_date = (DateTime)order.order_date,
                 delivery_date = order.delivery_date,
-
+                production_id = order.production_id,
                 customer_name = customerName,
                 customer_email = customerEmail,
                 customer_phone = customerPhone,
-
                 detail_address = req?.detail_address,
-
                 product_name = productName,
                 quantity = quantity,
-
                 production_start_date = prodStart,
                 production_end_date = prodEnd,
                 approver_name = approverName,
-
                 specification = specification,
                 note = req?.description,
-
                 final_total_cost = finalCost,
                 deposit_amount = deposit,
                 rush_amount = estimate?.rush_amount ?? 0m,
-
                 file_url = urlDesign,
                 contract_file = null
             };

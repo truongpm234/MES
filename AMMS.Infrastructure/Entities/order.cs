@@ -27,6 +27,10 @@ public partial class order
 
     public string? payment_status { get; set; }
 
+    public int? production_id { get; set; }
+
+    public virtual production? production { get; set; }
+
     public virtual user? consultant { get; set; }
 
     public virtual customer? customer { get; set; }

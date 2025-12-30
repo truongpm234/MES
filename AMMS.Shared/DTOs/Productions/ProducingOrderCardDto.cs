@@ -24,6 +24,8 @@ namespace AMMS.Shared.DTOs.Productions
 
         public string? current_stage { get; set; }
 
+        public string? status { get; set; }
+
         public List<string> stages { get; set; } = new();
 
         public string? production_status { get; set; }

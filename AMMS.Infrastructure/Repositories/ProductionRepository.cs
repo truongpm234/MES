@@ -71,7 +71,7 @@ namespace AMMS.Infrastructure.Repositories
                     code = o.code,
                     delivery_date = o.delivery_date,
                     product_type_id = pr.product_type_id,
-
+                    status = pr.status,
                     customer_name =
                         o.customer != null
                             ? (o.customer.company_name ?? o.customer.contact_name ?? "")
@@ -231,10 +231,11 @@ namespace AMMS.Infrastructure.Repositories
                     product_name = r.first_item_product_name,
                     quantity = r.first_item_quantity ?? 0,
                     delivery_date = r.delivery_date,
-
                     progress_percent = progress,
                     current_stage = currentStage,
-                    stages = stages
+                    stages = stages,
+                    status = r.status,
+                    production_status = r.status
                 });
             }
 
