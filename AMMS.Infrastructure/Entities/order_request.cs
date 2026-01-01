@@ -26,11 +26,7 @@ public partial class order_request
 
     public string? design_file_path { get; set; }
 
-    public DateTime? order_request_date { get; set; }
-
-    public string? province { get; set; }       
-
-    public string? district { get; set; }     
+    public DateTime? order_request_date { get; set; } 
     
     public string? detail_address { get; set; }
 
@@ -43,8 +39,6 @@ public partial class order_request
     public string? production_processes { get; set; }
 
     public string? coating_type { get; set; }
-
-    //public bool has_lamination { get; set; }
 
     public string? paper_code { get; set; }
 

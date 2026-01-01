@@ -12,7 +12,7 @@ namespace AMMS.Application.Helpers
         public static string QuoteEmail(order_request req, cost_estimate est, decimal deposit,
     string acceptUrl, string rejectUrl)
         {
-            var address = $"{req.detail_address}, {req.district}, {req.province}";
+            var address = $"{req.detail_address}";
             var delivery = req.delivery_date?.ToString("dd/MM/yyyy") ?? "N/A";
 
             return $@"

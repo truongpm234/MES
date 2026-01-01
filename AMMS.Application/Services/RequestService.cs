@@ -46,8 +46,6 @@ namespace AMMS.Application.Services
                 description = req.description,
                 design_file_path = req.design_file_path,
                 order_request_date = ToUnspecified(req.order_request_date),
-                province = req.province,
-                district = req.district,
                 detail_address = req.detail_address,
                 process_status = "Pending"
             };
@@ -78,8 +76,6 @@ namespace AMMS.Application.Services
             entity.quantity = req.quantity ?? entity.quantity;
             entity.description = req.description ?? entity.description;
             entity.design_file_path = req.design_file_path ?? entity.design_file_path;
-            entity.province = req.province ?? entity.province;
-            entity.district = req.district ?? entity.district;
             entity.detail_address = req.detail_address ?? entity.detail_address;
             entity.delivery_date = ToUnspecified(req.delivery_date);
             entity.order_request_date = ToUnspecified(req.order_request_date);
