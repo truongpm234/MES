@@ -64,6 +64,7 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<process_cost_rule> process_cost_rules { get; set; }
 
+    public virtual DbSet<product_template> product_templates { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -235,14 +236,11 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.coating_type)
                 .HasMaxLength(20)
                 .HasDefaultValue("NONE");
-            //entity.Property(e => e.has_lamination).HasDefaultValue(false);
-
             entity.HasOne(d => d.order)
                 .WithMany()
                 .HasForeignKey(d => d.order_id)
                 .OnDelete(DeleteBehavior.SetNull)
                 .HasConstraintName("fk_order_request_order");
-
             entity.HasOne(d => d.quote)
                 .WithMany()
                 .HasForeignKey(d => d.quote_id)
@@ -613,6 +611,15 @@ public partial class AppDbContext : DbContext
 
             entity.Property(e => e.unit_price)
                   .HasPrecision(18, 2);
+        });
+
+        modelBuilder.Entity<product_template>(entity =>
+        {
+            entity.HasKey(e => e.design_profile_id);
+
+            entity.HasOne(e => e.product_type)
+                  .WithMany(p => p.product_type_design_profiles)
+                  .HasForeignKey(e => e.product_type_id);
         });
 
         OnModelCreatingPartial(modelBuilder);

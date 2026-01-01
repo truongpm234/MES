@@ -22,4 +22,6 @@ public partial class product_type
     public virtual ICollection<product_type_process> product_type_processes { get; set; } = new List<product_type_process>();
 
     public virtual ICollection<production> productions { get; set; } = new List<production>();
+
+    public virtual ICollection<product_template> product_type_design_profiles { get; set; } = new List<product_template>();
 }

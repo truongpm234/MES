@@ -207,23 +207,76 @@ namespace AMMS.Application.Services
             decimal subtotal = baseCost + rushResult.RushAmount;
 
             // =====================
-            // 9. CHIẾT KHẤU
+            // 9. DISCOUNT
             // =====================
             var discountResult = CalculateDiscount(subtotal, req.discount_percent);
-            decimal finalTotal = subtotal - discountResult.DiscountAmount;
+            decimal finalTotalBase = subtotal - discountResult.DiscountAmount;
 
-            await SaveCostEstimate(req, paperCost, paperUnitPrice, materialCosts, materialCost,
-                overheadPercent, overheadCost, baseCost, rushResult, subtotal, discountResult,
-                finalTotal, estimatedFinish, now, totalPrintAreaM2, coatingType);
+            // =====================
+            // ⭐ 10. PROCESS COST (IN, BOI, BE, DAN...) – TÍNH TỔNG TIỀN GIA CÔNG
+            // =====================
+            var processDetails = await CalculateAllProcessCostDetails(
+                selectedProcesses: processes,
+                coatingType: coatingType,
+                sheetsWithWaste: req.paper.sheets_with_waste,
+                productQuantity: req.paper.quantity,
+                totalPrintAreaM2: totalPrintAreaM2,
+                ct: CancellationToken.None
+            );
 
+            decimal totalProcessCost = Math.Round(processDetails.Sum(x => x.total_cost), 2);
+
+            // =====================
+            // ⭐ 11. DESIGN COST – DỰA VÀO order_request
+            // =====================
             var orderReq = await _requestRepo.GetByIdAsync(req.order_request_id);
+
+            decimal designCost = 0m;
+            if (orderReq == null ||
+                orderReq.is_send_design == false ||
+                string.IsNullOrWhiteSpace(orderReq.design_file_path))
+            {
+                designCost = 200_000m; // 200k nếu KH chưa gửi thiết kế
+            }
+
+            // =====================
+            // ⭐ 12. FINAL TOTAL = base + rush - discount + process + design
+            // =====================
+            decimal finalTotal = finalTotalBase + totalProcessCost + designCost;
+
+            // =====================
+            // 13. LƯU cost_estimate + cost_estimate_process
+            // =====================
+            await SaveCostEstimate(
+                req,
+                paperCost,
+                paperUnitPrice,
+                materialCosts,
+                materialCost,
+                overheadPercent,
+                overheadCost,
+                baseCost,
+                rushResult,
+                subtotal,
+                discountResult,
+                finalTotal,
+                estimatedFinish,
+                now,
+                totalPrintAreaM2,
+                coatingType,
+                processDetails,
+                designCost
+            );
+
+            // =====================
+            // 14. CẬP NHẬT order_request (như code cũ)
+            // =====================
             if (orderReq != null)
             {
                 orderReq.paper_code = req.paper.paper_code;
                 orderReq.product_type = req.product_type?.Trim();
                 orderReq.production_processes = req.production_processes?.Trim();
                 orderReq.coating_type = req.coating_type?.Trim();
-                //orderReq.has_lamination = req.has_lamination;
 
                 var paperMaterial = await _materialRepo.GetByCodeAsync(req.paper.paper_code);
                 orderReq.paper_name = paperMaterial?.name;
@@ -236,13 +289,17 @@ namespace AMMS.Application.Services
                 await _requestRepo.SaveChangesAsync();
             }
 
+            // =====================
+            // 15. TRẢ RESPONSE (bao gồm design_cost, final_total_cost đã gồm process + design)
+            // =====================
             return BuildCostResponse(
                 paperCost, req.paper.sheets_with_waste, paperUnitPrice,
                 materialCosts, materialCost, overheadPercent, overheadCost,
                 baseCost, rushResult, subtotal, discountResult, finalTotal,
-                estimatedFinish, totalPrintAreaM2, coatingType);
+                estimatedFinish, totalPrintAreaM2, coatingType,
+                designCost // ⭐ NEW
+            );
         }
-
 
         private void ValidateRequest(PaperEstimateRequest req)
         {
@@ -530,22 +587,24 @@ namespace AMMS.Application.Services
         }
 
         private async Task SaveCostEstimate(
-            CostEstimateRequest req,
-            decimal paperCost,
-            decimal paperUnitPrice,
-            MaterialCostResult materialCosts,
-            decimal materialCost,
-            decimal overheadPercent,
-            decimal overheadCost,
-            decimal baseCost,
-            RushResult rushResult,
-            decimal subtotal,
-            DiscountResult discountResult,
-            decimal finalTotal,
-            DateTime estimatedFinish,
-            DateTime now,
-            decimal totalAreaM2,
-            CoatingType coatingType)
+                            CostEstimateRequest req,
+                            decimal paperCost,
+                            decimal paperUnitPrice,
+                            MaterialCostResult materialCosts,
+                            decimal materialCost,
+                            decimal overheadPercent,
+                            decimal overheadCost,
+                            decimal baseCost,
+                            RushResult rushResult,
+                            decimal subtotal,
+                            DiscountResult discountResult,
+                            decimal finalTotal,
+                            DateTime estimatedFinish,
+                            DateTime now,
+                            decimal totalAreaM2,
+                            CoatingType coatingType,
+                            List<ProcessCostDetail> processCostDetails,
+                            decimal designCost)
         {
             var entity = new cost_estimate
             {
@@ -612,8 +671,29 @@ namespace AMMS.Application.Services
                 sheets_total = req.paper.sheets_with_waste,
 
                 // Diện tích
-                total_area_m2 = Math.Round(totalAreaM2, 4)
+                total_area_m2 = Math.Round(totalAreaM2, 4),
+
+                // ⭐ DESIGN COST
+                design_cost = Math.Round(designCost, 2)
             };
+
+            foreach (var d in processCostDetails)
+            {
+                if (d.quantity <= 0 || d.total_cost <= 0)
+                    continue;
+
+                entity.process_costs.Add(new cost_estimate_process
+                {
+                    process_code = d.process,
+                    process_name = d.process,
+                    quantity = d.quantity,
+                    unit = d.unit,
+                    unit_price = d.unit_price,
+                    total_cost = d.total_cost,
+                    note = d.note,
+                    created_at = now
+                });
+            }
 
             await _estimateRepo.AddAsync(entity);
             await _estimateRepo.SaveChangesAsync();
@@ -622,21 +702,22 @@ namespace AMMS.Application.Services
         // ==================== BUILD RESPONSE ====================
 
         private CostEstimateResponse BuildCostResponse(
-            decimal paperCost,
-            int paperSheetsUsed,
-            decimal paperUnitPrice,
-            MaterialCostResult materialCosts,
-            decimal materialCost,
-            decimal overheadPercent,
-            decimal overheadCost,
-            decimal baseCost,
-            RushResult rushResult,
-            decimal subtotal,
-            DiscountResult discountResult,
-            decimal finalTotal,
-            DateTime estimatedFinish,
-            decimal totalAreaM2,
-            CoatingType coatingType)
+    decimal paperCost,
+    int paperSheetsUsed,
+    decimal paperUnitPrice,
+    MaterialCostResult materialCosts,
+    decimal materialCost,
+    decimal overheadPercent,
+    decimal overheadCost,
+    decimal baseCost,
+    RushResult rushResult,
+    decimal subtotal,
+    DiscountResult discountResult,
+    decimal finalTotal,
+    DateTime estimatedFinish,
+    decimal totalAreaM2,
+    CoatingType coatingType,
+    decimal designCost)
         {
             var response = new CostEstimateResponse
             {
@@ -693,9 +774,11 @@ namespace AMMS.Application.Services
                 discount_percent = discountResult.DiscountPercent,
                 discount_amount = Math.Round(discountResult.DiscountAmount, 2),
 
+                // cost design
+                design_cost = Math.Round(designCost, 2),
+
                 // Tổng cuối
                 final_total_cost = Math.Round(finalTotal, 2),
-
                 // Thông tin khác
                 estimated_finish_date = DateTime.SpecifyKind(estimatedFinish, DateTimeKind.Utc),
                 total_area_m2 = Math.Round(totalAreaM2, 4),
@@ -846,7 +929,7 @@ namespace AMMS.Application.Services
 
         private static bool IsProcessApplied(ProcessType p, List<ProcessType> selected, CoatingType coatingType)
         {
-            
+
             if (p == ProcessType.IN)
                 return selected.Contains(ProcessType.IN);
 
@@ -857,7 +940,7 @@ namespace AMMS.Application.Services
                 return selected.Contains(ProcessType.CAN_MANG);
 
             if (p == ProcessType.DUT || p == ProcessType.CAT)
-                return selected.Contains(p); 
+                return selected.Contains(p);
 
             return selected.Contains(p);
         }
