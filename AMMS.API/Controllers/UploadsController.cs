@@ -43,7 +43,6 @@ namespace AMMS.API.Controllers
 
             await using var stream = file.OpenReadStream();
 
-            // folder trên Cloudinary, bạn có thể đổi theo convention của bạn
             var folder = "order-requests/designs";
 
             var url = await _uploadService.UploadAsync(

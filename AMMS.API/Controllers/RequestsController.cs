@@ -38,11 +38,11 @@ namespace AMMS.API.Controllers
         }
         [HttpPost("create-request-by-consultant")]
         [ProducesResponseType(typeof(object), StatusCodes.Status201Created)]
-        public async Task<IActionResult> CreateOrderRequest([FromBody] CreateOrderRequestDto dto, CancellationToken ct)
+        public async Task<IActionResult> CreateOrderRequest([FromBody] CreateResquestConsultant dto)
         {
-            var id = await _service.CreateOrderRequestAsync(dto, ct);
+            var id = await _service.CreateRequestByConsultantAsync(dto);
 
-            return CreatedAtAction(actionName: nameof(GetById), routeValues: new { id }, value: new { order_request_id = id });
+            return StatusCode(201);
         }
 
         [HttpPost]

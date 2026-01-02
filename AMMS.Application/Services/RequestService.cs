@@ -53,8 +53,7 @@ namespace AMMS.Application.Services
                 design_file_path = req.design_file_path,
                 order_request_date = ToUnspecified(req.order_request_date),
                 detail_address = req.detail_address,
-                process_status = "Pending",
-                is_send_design = req.is_send_design
+                process_status = "Pending"
             };
 
             await _requestRepo.AddAsync(entity);
@@ -63,6 +62,21 @@ namespace AMMS.Application.Services
             return new CreateRequestResponse();
         }
 
+        public async Task<CreateRequestResponse> CreateRequestByConsultantAsync(CreateResquestConsultant req)
+        {
+            var entity = new order_request
+            {
+                customer_name = req.customer_name,
+                customer_phone = req.customer_phone,
+                customer_email = req.customer_email,
+                detail_address = req.detail_address
+            };
+
+            await _requestRepo.AddAsync(entity);
+            await _requestRepo.SaveChangesAsync();
+
+            return new CreateRequestResponse();
+        }
         public async Task<UpdateRequestResponse> UpdateAsync(int id, UpdateOrderRequest req)
         {
             var entity = await _requestRepo.GetByIdAsync(id);
