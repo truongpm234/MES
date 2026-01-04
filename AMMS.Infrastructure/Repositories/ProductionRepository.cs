@@ -311,19 +311,20 @@ namespace AMMS.Infrastructure.Repositories
                             : (c != null ? (c.company_name ?? c.contact_name ?? "") : ""),
 
                     first_item = _db.order_items.AsNoTracking()
-                            .Where(i => i.order_id == o.order_id)
-                            .OrderBy(i => i.item_id)
-                            .Select(i => new
-                                {
-                                    i.item_id,
-                                    i.product_name,
-                                    i.quantity,
-                                    i.production_process,
-                                    i_length = (int?)EF.Property<int?>(i, "length_mm"),
-                                    i_width = (int?)EF.Property<int?>(i, "width_mm"),
-                                    i_height = (int?)EF.Property<int?>(i, "height_mm"),
-                                }).FirstOrDefault()
-                            }).FirstOrDefaultAsync(ct);
+                        .Where(i => i.order_id == o.order_id)
+                        .OrderBy(i => i.item_id)
+                        .Select(i => new
+                        {
+                            i.item_id,
+                            i.product_name,
+                            i.quantity,
+                            i.production_process,
+                            i_length = (int?)EF.Property<int?>(i, "length_mm"),
+                            i_width = (int?)EF.Property<int?>(i, "width_mm"),
+                            i_height = (int?)EF.Property<int?>(i, "height_mm"),
+                            i_ink_weight_kg = (decimal?)i.est_ink_weight_kg
+                        }).FirstOrDefault()
+                }).FirstOrDefaultAsync(ct);
 
             if (header == null) return null;
 
@@ -348,6 +349,23 @@ namespace AMMS.Infrastructure.Repositories
                 height_mm = header.first_item?.i_height,
             };
 
+            order_request? orderReq = null;
+            int? numberOfPlates = null;
+
+            if (dto.order_id.HasValue)
+            {
+                orderReq = await _db.order_requests
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(x => x.order_id == dto.order_id.Value, ct);
+
+                numberOfPlates = orderReq?.number_of_plates;
+            }
+
+            decimal estInkWeightKg = 0m;
+            if (header.first_item != null && header.first_item.i_ink_weight_kg.HasValue)
+            {
+                estInkWeightKg = header.first_item.i_ink_weight_kg.Value;
+            }
             int? orderItemId = header.first_item?.item_id;
             List<bom> bomRows = new();
 
@@ -394,7 +412,6 @@ namespace AMMS.Infrastructure.Repositories
                     scanned_code = l.scanned_code
                 }).ToListAsync(ct);
 
-            // 3) Load product_type_process steps (giữ nguyên)
             var ptId = header.pr.product_type_id;
             List<ProductTypeProcessStepDto> steps = new();
 
@@ -414,7 +431,6 @@ namespace AMMS.Infrastructure.Repositories
                     .ToListAsync(ct);
             }
 
-            // 4) Filter theo order_item.production_process như cũ
             HashSet<string>? selected = null;
             var production_processes = header.first_item?.production_process;
             if (!string.IsNullOrWhiteSpace(production_processes))
@@ -425,6 +441,8 @@ namespace AMMS.Infrastructure.Repositories
             }
 
             var stages = new List<ProductionStageDto>();
+
+            decimal previousOutputQty = dto.quantity;
 
             foreach (var s in steps)
             {
@@ -446,70 +464,16 @@ namespace AMMS.Infrastructure.Repositories
                 var denom = qtyGood + qtyBad;
                 var wastePct = denom <= 0 ? 0m : Math.Round((qtyBad * 100m) / denom, 2);
 
-                var outputQty = qtyGood > 0 ? (decimal)qtyGood : (decimal)dto.quantity;
+                decimal outputQty = qtyGood > 0 ? qtyGood : previousOutputQty;
 
-                var outputUnit = "tờ";
-
-                string sizeSuffix = dto.length_mm.HasValue && dto.width_mm.HasValue && dto.height_mm.HasValue
-                    ? $" ({dto.length_mm}×{dto.width_mm}×{dto.height_mm})mm"
-                    : string.Empty;
-
-                var outputName = $"{s.process_name} {dto.product_name}{sizeSuffix}".Trim();
-
-                var outputProduct = new StageMaterialDto
-                {
-                    name = outputName,
-                    code = s.process_code,
-                    quantity = outputQty,
-                    unit = outputUnit
-                };
-
-                var inputMaterials = new List<StageMaterialDto>();
-
-                if (bomRows.Count > 0)
-                {
-                    foreach (var b in bomRows)
-                    {
-                        var mcode = (b.material_code ?? "").Trim().ToUpperInvariant();
-
-                        bool belongs = false;
-
-                        if (pcode == "CAT" || pcode == "RALO")
-                        {
-                            if (!mcode.Contains("INK") &&
-                                !mcode.Contains("MANG") &&
-                                !mcode.StartsWith("BOI"))
-                            {
-                                belongs = true;
-                            }
-                        }
-                        else if (pcode == "IN")
-                        {
-                            if (mcode.Contains("INK") || mcode.Contains("KEM"))
-                                belongs = true;
-                        }
-                        else if (pcode == "BOI")
-                        {
-                            if (mcode.StartsWith("BOI"))
-                                belongs = true;
-                        }
-                        else if (pcode == "CAN_MANG")
-                        {
-                            if (mcode.Contains("LAMINATION") || mcode.Contains("MANG"))
-                                belongs = true;
-                        }
-
-                        if (!belongs) continue;
-
-                        inputMaterials.Add(new StageMaterialDto
-                        {
-                            name = b.material_name ?? b.material_code ?? "",
-                            code = b.material_code,
-                            quantity = b.qty_total ?? 0,
-                            unit = b.unit ?? ""
-                        });
-                    }
-                }
+                var io = BuildStageIO(
+                    processCode: pcode,
+                    processName: s.process_name ?? "",
+                    detail: dto,
+                    inputQty: previousOutputQty,
+                    outputQty: outputQty,
+                    numberOfPlates: numberOfPlates,
+                    estInkWeightKg: estInkWeightKg);
 
                 var stage = new ProductionStageDto
                 {
@@ -533,11 +497,15 @@ namespace AMMS.Infrastructure.Repositories
 
                     logs = stageLogs,
 
-                    input_materials = inputMaterials,
-                    output_product = outputProduct
+                    // ⭐ NEW
+                    input_materials = io.inputs,
+                    output_product = io.output
                 };
 
                 stages.Add(stage);
+
+                // output của công đoạn này là input cho công đoạn sau
+                previousOutputQty = outputQty;
             }
 
             dto.stages = stages;
@@ -666,6 +634,97 @@ namespace AMMS.Infrastructure.Repositories
 
             await _db.SaveChangesAsync(ct);
             return true;
+        }
+
+        private static (List<StageMaterialDto> inputs, StageMaterialDto output) BuildStageIO(string processCode, string processName, ProductionDetailDto detail, decimal inputQty, decimal outputQty, int? numberOfPlates, decimal estInkWeightKg)
+        {
+            var inputs = new List<StageMaterialDto>();
+
+            var code = (processCode ?? "").Trim().ToUpperInvariant();
+            var baseName = detail.product_name ?? "";
+
+            string sizeSuffix = detail.length_mm.HasValue && detail.width_mm.HasValue && detail.height_mm.HasValue
+                ? $" ({detail.length_mm}×{detail.width_mm}×{detail.height_mm})mm"
+                : string.Empty;
+
+            if (code == "CAT" || code == "RALO" || code == "RA_LO")
+            {
+                // input: Giấy đã ralo
+                inputs.Add(new StageMaterialDto
+                {
+                    name = "Giấy đã ralo",
+                    code = null,
+                    quantity = inputQty,
+                    unit = "tờ"
+                });
+
+                var output = new StageMaterialDto
+                {
+                    name = $"Giấy đã cắt{sizeSuffix}",
+                    code = processCode,
+                    quantity = outputQty,
+                    unit = "tờ"
+                };
+
+                return (inputs, output);
+            }
+
+            if (code == "IN")
+            {
+                inputs.Add(new StageMaterialDto
+                {
+                    name = $"Giấy đã cắt{sizeSuffix}",
+                    quantity = inputQty,
+                    unit = "tờ"
+                });
+
+                if (numberOfPlates.HasValue && numberOfPlates.Value > 0)
+                {
+                    inputs.Add(new StageMaterialDto
+                    {
+                        name = "Kẽm in",
+                        quantity = numberOfPlates.Value,
+                        unit = "bản"
+                    });
+                }
+
+                if (estInkWeightKg > 0)
+                {
+                    inputs.Add(new StageMaterialDto
+                    {
+                        name = "Mực các loại",
+                        quantity = estInkWeightKg,
+                        unit = "kg"
+                    });
+                }
+
+                var output = new StageMaterialDto
+                {
+                    name = $"Giấy đã in{sizeSuffix}",
+                    code = processCode,
+                    quantity = outputQty,
+                    unit = "tờ"
+                };
+
+                return (inputs, output);
+            }
+
+            inputs.Add(new StageMaterialDto
+            {
+                name = baseName + sizeSuffix,
+                quantity = inputQty,
+                unit = "tờ"
+            });
+
+            var defaultOutput = new StageMaterialDto
+            {
+                name = $"{processName} {baseName}{sizeSuffix}".Trim(),
+                code = processCode,
+                quantity = outputQty,
+                unit = "tờ"
+            };
+
+            return (inputs, defaultOutput);
         }
 
         static List<TaskLogDto> logsByTaskId(List<TaskLogDto> all, int taskId)
