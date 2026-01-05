@@ -78,5 +78,15 @@ namespace AMMS.API.Controllers
             return Ok(result);
         }
 
+        [HttpPost("start/{orderId:int}")]
+        public async Task<IActionResult> StartProduction(int orderId, CancellationToken ct)
+        {
+            var ok = await _service.StartProductionByOrderIdAsync(orderId, ct);
+
+            if (!ok)
+                return NotFound(new { message = "Production not found for this orderId" });
+
+            return NoContent();
+        }
     }
 }

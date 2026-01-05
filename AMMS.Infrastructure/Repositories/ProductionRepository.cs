@@ -658,6 +658,24 @@ namespace AMMS.Infrastructure.Repositories
             return true;
         }
 
+        public async Task<bool> StartProductionByOrderIdAsync(int orderId, DateTime now, CancellationToken ct = default)
+        {
+            // Lấy production theo order_id (giả sử 1 order có 1 production đang active)
+            var prod = await _db.productions
+                .FirstOrDefaultAsync(p => p.order_id == orderId, ct);
+
+            if (prod == null)
+                return false;
+
+            prod.status = "InProcessing";
+
+            if (prod.start_date == null)
+                prod.start_date = now;
+
+            await _db.SaveChangesAsync(ct);
+            return true;
+        }
+
         private static (List<StageMaterialDto> inputs, StageMaterialDto output, decimal nextOutputQty)
     BuildStageIO(
         string processCode,

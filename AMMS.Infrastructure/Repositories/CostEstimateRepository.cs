@@ -28,7 +28,6 @@ namespace AMMS.Infrastructure.Repositories
         public async Task<cost_estimate?> GetByOrderRequestIdAsync(int orderRequestId)
         {
             return await _db.cost_estimates
-                .AsNoTracking()
                 .Where(x => x.order_request_id == orderRequestId)
                 .OrderByDescending(x => x.estimate_id)
                 .FirstOrDefaultAsync();
