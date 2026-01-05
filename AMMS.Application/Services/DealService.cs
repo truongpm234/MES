@@ -68,7 +68,33 @@ namespace AMMS.Application.Services
             var acceptUrl = $"{baseUrl}/api/requests/accept-pay?orderRequestId={orderRequestId}&token={token}";
             var rejectUrl = $"{baseUrl}/api/requests/reject-form?orderRequestId={orderRequestId}&token={token}";
 
-            var html = DealEmailTemplates.QuoteEmail(req, est, deposit, acceptUrl, rejectUrl);
+            var orderDetailUrl = $"https://sep490-fe.vercel.app/order-detail/{orderRequestId}";
+            var hasDesignFile = !string.IsNullOrWhiteSpace(req.design_file_path);
+            var customerWillSendDesign = (req.is_send_design ?? false) || !hasDesignFile;
+
+            string html;
+
+            if (customerWillSendDesign)
+            {
+                // 🔹 Trường hợp KH tự gửi thiết kế (is_send_design = true, chưa có file)
+                html = DealEmailTemplates.QuoteEmailNeedDesign(
+                    req,
+                    est,
+                    deposit,
+                    acceptUrl,
+                    rejectUrl,
+                    orderDetailUrl);
+            }
+            else
+            {
+                // 🔹 Trường hợp đã có file thiết kế sẵn -> dùng form cũ như hiện tại
+                html = DealEmailTemplates.QuoteEmail(
+                    req,
+                    est,
+                    deposit,
+                    acceptUrl,
+                    rejectUrl);
+            }
 
             await _emailService.SendAsync(req.customer_email, "Báo giá đơn hàng in ấn", html);
         }

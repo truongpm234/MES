@@ -59,6 +59,73 @@ namespace AMMS.Application.Helpers
 </html>";
         }
 
+        public static string QuoteEmailNeedDesign(
+            order_request req,
+            cost_estimate est,
+            decimal deposit,
+            string acceptUrl,
+            string rejectUrl,
+            string orderDetailUrl)
+        {
+            var delivery = req.delivery_date?.ToString("dd/MM/yyyy") ?? "N/A";
+            var finalTotal = est.final_total_cost;
+
+            return $@"
+<div style='font-family:Arial,Helvetica,sans-serif;max-width:720px;margin:24px auto;color:#111;line-height:1.6'>
+  <h2 style='margin-top:0'>BÁO GIÁ ĐƠN HÀNG IN ẤN</h2>
+
+  <p>Chào {req.customer_name},</p>
+  <p>Chúng tôi gửi đến bạn báo giá cho đơn hàng <b>{req.product_name}</b> với các thông tin như sau:</p>
+
+  <h3>Thông tin đơn hàng</h3>
+  <ul>
+    <li><b>Mã yêu cầu:</b> AM{req.order_request_id:D6}</li>
+    <li><b>Sản phẩm:</b> {req.product_name}</li>
+    <li><b>Số lượng:</b> {req.quantity}</li>
+    <li><b>Ngày giao dự kiến:</b> {delivery}</li>
+  </ul>
+
+  <h3>Thông tin báo giá</h3>
+  <ul>
+    <li><b>Tổng giá trị:</b> {finalTotal:n0} VND</li>
+    <li><b>Tiền cọc (dự kiến thu):</b> {deposit:n0} VND</li>
+  </ul>
+
+  <p style='margin:16px 0'>
+    Vì bạn chọn phương án <b>Tự gửi file thiết kế</b>, vui lòng nhấn vào liên kết dưới đây để
+    xem chi tiết đơn hàng và tải lên/cập nhật file thiết kế:
+  </p>
+
+  <p style='text-align:center;margin:18px 0'>
+    <a href='{orderDetailUrl}'
+       style='display:inline-block;padding:10px 18px;border-radius:6px;
+              background:#2563eb;color:#ffffff;text-decoration:none;font-weight:600'>
+      Xem chi tiết đơn hàng & gửi thiết kế
+    </a>
+  </p>
+
+  <p style='margin:18px 0'>
+    Sau khi xem chi tiết và thống nhất, bạn có thể:
+  </p>
+  <ul>
+    <li>
+      <a href='{acceptUrl}' style='color:#16a34a;font-weight:600'>
+        Đồng ý báo giá & tiến hành thanh toán tiền cọc
+      </a>
+    </li>
+    <li>
+      <a href='{rejectUrl}' style='color:#dc2626'>
+        Từ chối báo giá
+      </a>
+    </li>
+  </ul>
+
+  <p>Nếu bạn có bất kỳ thắc mắc nào, hãy phản hồi lại email này để được hỗ trợ.</p>
+
+  <p>Trân trọng,<br/>Đội ngũ AMMS</p>
+</div>";
+        }
+
         public static string AcceptCustomerEmail(
             order_request req,
             order order,
