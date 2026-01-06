@@ -21,5 +21,7 @@
         public DateTime? order_request_date { get; set; }
 
         public string? detail_address { get; set; }
+
+        public bool is_send_design { get; set; }
     }
 }

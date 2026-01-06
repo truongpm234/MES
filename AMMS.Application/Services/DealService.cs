@@ -38,7 +38,6 @@ namespace AMMS.Application.Services
             var req = await _requestRepo.GetByIdAsync(orderRequestId)
                 ?? throw new Exception("Order request not found");
 
-            // ✅ lấy estimate mới nhất
             var est = await _estimateRepo.GetByOrderRequestIdAsync(orderRequestId)
                 ?? throw new Exception("Estimate not found");
 
@@ -68,7 +67,7 @@ namespace AMMS.Application.Services
             var acceptUrl = $"{baseUrl}/api/requests/accept-pay?orderRequestId={orderRequestId}&token={token}";
             var rejectUrl = $"{baseUrl}/api/requests/reject-form?orderRequestId={orderRequestId}&token={token}";
 
-            var orderDetailUrl = $"https://sep490-fe.vercel.app/order-detail/{orderRequestId}";
+            var orderDetailUrl = $"{baseUrl}/order-detail/{orderRequestId}";
             var hasDesignFile = !string.IsNullOrWhiteSpace(req.design_file_path);
             var customerWillSendDesign = (req.is_send_design ?? false) || !hasDesignFile;
 
@@ -76,7 +75,6 @@ namespace AMMS.Application.Services
 
             if (customerWillSendDesign)
             {
-                // 🔹 Trường hợp KH tự gửi thiết kế (is_send_design = true, chưa có file)
                 html = DealEmailTemplates.QuoteEmailNeedDesign(
                     req,
                     est,
@@ -87,7 +85,6 @@ namespace AMMS.Application.Services
             }
             else
             {
-                // 🔹 Trường hợp đã có file thiết kế sẵn -> dùng form cũ như hiện tại
                 html = DealEmailTemplates.QuoteEmail(
                     req,
                     est,

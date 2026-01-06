@@ -67,9 +67,9 @@ namespace AMMS.Infrastructure.Repositories
         public async Task<bool> HasEnoughStockForRequestAsync(int requestId, CancellationToken ct = default)
         {
             var q =
-                from r in _db.order_requests.AsNoTracking()
+                from r in _db.order_requests
                 where r.order_request_id == requestId
-                join m in _db.materials.AsNoTracking()
+                join m in _db.materials
                     on r.product_name equals m.name into mj
                 from m in mj.DefaultIfEmpty()
                 select new
