@@ -32,18 +32,30 @@ namespace AMMS.Infrastructure.Repositories
             {
                 if (string.IsNullOrWhiteSpace(status)) return false;
 
-                return status.Equals("Not Enough", StringComparison.OrdinalIgnoreCase)
-                    || status.Equals("false", StringComparison.OrdinalIgnoreCase)
-                    || status.Equals("0", StringComparison.OrdinalIgnoreCase);
+                var s = status.Trim();
+                return s.Equals("Not Enough", StringComparison.OrdinalIgnoreCase)
+                    || s.Equals("Not enough", StringComparison.OrdinalIgnoreCase)
+                    || s.Equals("false", StringComparison.OrdinalIgnoreCase)
+                    || s.Equals("0", StringComparison.OrdinalIgnoreCase);
             }
 
-            // 1) Lấy page orders (kèm customer + item đầu)
-            var orders = await _db.orders
-                .AsNoTracking()
-                .OrderByDescending(o => o.order_date)
-                .Skip(skip)
-                .Take(take)
-                .Select(o => new
+            // 1) Lấy page orders (kèm fallback customer name)
+            var orders = await (
+                from o in _db.orders.AsNoTracking()
+
+                    // quote -> customer
+                join q in _db.quotes.AsNoTracking() on o.quote_id equals q.quote_id into qj
+                from q in qj.DefaultIfEmpty()
+
+                join c in _db.customers.AsNoTracking() on q.customer_id equals c.customer_id into cj
+                from c in cj.DefaultIfEmpty()
+
+                    // order_request fallback
+                join r in _db.order_requests.AsNoTracking() on o.order_id equals r.order_id into rj
+                from r in rj.DefaultIfEmpty()
+
+                orderby o.order_date descending, o.order_id descending
+                select new
                 {
                     o.order_id,
                     o.code,
@@ -51,12 +63,30 @@ namespace AMMS.Infrastructure.Repositories
                     o.delivery_date,
                     Status = o.status ?? "",
 
-                    CustomerName =
+                    // ✅ FIX: customer_name fallback theo thứ tự:
+                    // 1) orders.customer (nếu có customer_id)
+                    // 2) quote->customer
+                    // 3) order_request
+                    customer_name =
+                        // 1) nếu order có navigation customer (customer_id != null)
                         (o.customer != null
                             ? (o.customer.company_name ?? o.customer.contact_name ?? "")
-                            : ""),
+                            : "") != ""
+                        ? (o.customer!.company_name ?? o.customer!.contact_name ?? "")
+                        : (
+                            // 2) fallback quote->customer
+                            (c != null
+                                ? (c.company_name ?? c.contact_name ?? "")
+                                : "") != ""
+                            ? (c!.company_name ?? c!.contact_name ?? "")
+                            : (
+                                // 3) fallback order_request
+                                (r != null ? (r.customer_name ?? "") : "")
+                            )
+                        ),
 
-                    FirstItem = o.order_items
+                    FirstItem = _db.order_items.AsNoTracking()
+                        .Where(i => i.order_id == o.order_id)
                         .OrderBy(i => i.item_id)
                         .Select(i => new
                         {
@@ -65,8 +95,11 @@ namespace AMMS.Infrastructure.Repositories
                             i.quantity
                         })
                         .FirstOrDefault()
-                })
-                .ToListAsync(ct);
+                }
+            )
+            .Skip(skip)
+            .Take(take)
+            .ToListAsync(ct);
 
             if (orders.Count == 0) return new List<OrderResponseDto>();
 
@@ -76,10 +109,7 @@ namespace AMMS.Infrastructure.Repositories
                 .Select(o => o.order_id)
                 .ToList();
 
-            // missingByOrder: OrderId -> list thiếu NVL
             Dictionary<int, List<MissingMaterialDto>> missingByOrder = new();
-
-            // ordersWithBom: OrderId nào có BOM lines
             var ordersWithBom = new HashSet<int>();
 
             if (orderIdsNeedCalc.Count > 0)
@@ -89,7 +119,7 @@ namespace AMMS.Infrastructure.Repositories
                     from oi in _db.order_items.AsNoTracking()
                     join b in _db.boms.AsNoTracking() on oi.item_id equals b.order_item_id
                     join m in _db.materials.AsNoTracking() on b.material_id equals m.material_id
-                    where oi.order_id != null && orderIdsNeedCalc.Contains(oi.order_id!.Value)
+                    where oi.order_id != null && orderIdsNeedCalc.Contains(oi.order_id.Value)
                     select new
                     {
                         OrderId = oi.order_id!.Value,
@@ -145,9 +175,9 @@ namespace AMMS.Infrastructure.Repositories
 
                             foreach (var r in g)
                             {
-                                var qty = r.Quantity;                               // số lượng order
-                                var qtyPerProduct = Math.Round(r.QtyPerProduct, 4); // định mức
-                                var wastePercent = Math.Round(r.WastagePercent, 2); // % hao hụt
+                                var qty = r.Quantity;
+                                var qtyPerProduct = Math.Round(r.QtyPerProduct, 4);
+                                var wastePercent = Math.Round(r.WastagePercent, 2);
 
                                 var baseQty = Math.Round(qty * qtyPerProduct, 4);
                                 var factor = Math.Round(1m + (wastePercent / 100m), 4);
@@ -191,7 +221,7 @@ namespace AMMS.Infrastructure.Repositories
                 }
             }
 
-            // 3) Build response (HƯỚNG A)
+            // 3) Build response
             return orders.Select(o =>
             {
                 missingByOrder.TryGetValue(o.order_id, out var missingMaterials);
@@ -200,7 +230,6 @@ namespace AMMS.Infrastructure.Repositories
 
                 if (IsNotEnoughStatus(o.Status))
                 {
-                    // ✅ Nếu Not Enough mà không có BOM => false (tránh true ảo)
                     if (!ordersWithBom.Contains(o.order_id))
                     {
                         canFulfill = false;
@@ -208,13 +237,11 @@ namespace AMMS.Infrastructure.Repositories
                     }
                     else
                     {
-                        // ✅ Có BOM: thiếu -> false, không thiếu -> true
                         canFulfill = (missingMaterials == null || missingMaterials.Count == 0);
                     }
                 }
                 else
                 {
-                    // ✅ Các status khác: giữ như logic cũ (mặc định true)
                     canFulfill = true;
                 }
 
@@ -222,7 +249,7 @@ namespace AMMS.Infrastructure.Repositories
                 {
                     order_id = o.order_id.ToString(),
                     code = o.code,
-                    customer_name = o.CustomerName,
+                    customer_name = o.customer_name ?? "",  
                     product_name = o.FirstItem?.product_name,
                     product_id = o.FirstItem?.product_type_id?.ToString(),
                     quantity = o.FirstItem?.quantity ?? 0,
@@ -451,7 +478,6 @@ namespace AMMS.Infrastructure.Repositories
             NormalizePaging(ref page, ref pageSize);
             var skip = (page - 1) * pageSize;
 
-            // ✅ Lấy line-level nhưng dùng double để tránh Npgsql overflow khi đọc numeric cực lớn
             var lines = await (
                 from oi in _db.order_items.AsNoTracking()
                 join o in _db.orders.AsNoTracking() on oi.order_id equals o.order_id
@@ -464,6 +490,9 @@ namespace AMMS.Infrastructure.Repositories
                     unit = m.unit,
                     request_date = o.delivery_date,
 
+                    // ✅ is_enough from orders
+                    is_enough = o.is_enough,
+
                     available = (double)(m.stock_qty ?? 0m),
                     unit_price = (double)(m.cost_price ?? 0m),
 
@@ -474,11 +503,9 @@ namespace AMMS.Infrastructure.Repositories
                 }
             ).ToListAsync(ct);
 
-            // ✅ Group + tính toán trong memory (tránh SQL numeric vượt decimal)
             static decimal SafeToDecimal(double v, int round)
             {
                 if (double.IsNaN(v) || double.IsInfinity(v)) return 0m;
-                // clamp về range decimal
                 var max = (double)decimal.MaxValue;
                 if (v > max) return decimal.MaxValue;
                 if (v < -max) return decimal.MinValue;
@@ -502,12 +529,21 @@ namespace AMMS.Infrastructure.Repositories
 
                     var needed = SafeToDecimal(neededD, 4);
                     var available = SafeToDecimal(availableD, 4);
-                    var missing = needed - available;
-                    if (missing < 0) missing = 0;
+
+                    // ✅ BASE missing ONLY (no buffer, no rounding)
+                    var missingBase = needed - available;
+                    if (missingBase < 0m) missingBase = 0m;
 
                     var unitPrice = SafeToDecimal(unitPriceD, 2);
-                    var totalPrice = SafeMul(missing, unitPrice);
-                    totalPrice = Math.Round(totalPrice, 2);
+                    var totalPriceBase = SafeMul(missingBase, unitPrice);
+                    totalPriceBase = Math.Round(totalPriceBase, 2);
+
+                    // summary is_enough
+                    var anyFalse = g.Any(x => x.is_enough == false);
+                    var anyTrue = g.Any(x => x.is_enough == true);
+                    bool? isEnoughSummary =
+                        anyFalse ? false :
+                        (anyTrue && !g.Any(x => x.is_enough == null) ? true : (bool?)null);
 
                     return new MissingMaterialDto
                     {
@@ -518,16 +554,17 @@ namespace AMMS.Infrastructure.Repositories
 
                         needed = needed,
                         available = available,
-                        quantity = missing,
 
-                        total_price = totalPrice
+                        // ✅ quantity = missingBase
+                        quantity = missingBase,
+                        total_price = totalPriceBase,
+                        is_enough = isEnoughSummary
                     };
                 })
                 .Where(x => x.quantity > 0m)
                 .OrderByDescending(x => x.quantity)
                 .ToList();
 
-            // ✅ paging sau khi đã group
             var pageRows = grouped.Skip(skip).Take(pageSize + 1).ToList();
             var hasNext = pageRows.Count > pageSize;
             if (hasNext) pageRows.RemoveAt(pageRows.Count - 1);

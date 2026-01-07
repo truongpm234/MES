@@ -53,7 +53,8 @@ namespace AMMS.Application.Services
                 design_file_path = req.design_file_path,
                 order_request_date = ToUnspecified(req.order_request_date),
                 detail_address = req.detail_address,
-                process_status = "Pending"
+                process_status = "Pending",
+                is_send_design = req.is_send_design
             };
 
             await _requestRepo.AddAsync(entity);
@@ -124,7 +125,7 @@ namespace AMMS.Application.Services
 
         public Task<order_request?> GetByIdAsync(int id) => _requestRepo.GetByIdAsync(id);
 
-        public async Task<PagedResultLite<order_request>> GetPagedAsync(int page, int pageSize)
+        public async Task<PagedResultLite<RequestPagedDto>> GetPagedAsync(int page, int pageSize)
         {
             if (page <= 0) page = 1;
             if (pageSize <= 0) pageSize = 10;
@@ -134,9 +135,9 @@ namespace AMMS.Application.Services
             var list = await _requestRepo.GetPagedAsync(skip, pageSize + 1);
 
             var hasNext = list.Count > pageSize;
-            var data = list.Take(pageSize).ToList();
+            var data = hasNext ? list.Take(pageSize).ToList() : list;
 
-            return new PagedResultLite<order_request>
+            return new PagedResultLite<RequestPagedDto>
             {
                 Page = page,
                 PageSize = pageSize,
@@ -145,7 +146,7 @@ namespace AMMS.Application.Services
             };
         }
 
-        // ✅✅✅ UPDATED: ConvertToOrderAsync thêm product_type_id vào order_item
+
         public async Task<ConvertRequestToOrderResponse> ConvertToOrderAsync(int requestId)
         {
             var strategy = _db.Database.CreateExecutionStrategy();
@@ -212,7 +213,6 @@ namespace AMMS.Application.Services
                     var hasEnoughStock = await _requestRepo.HasEnoughStockForRequestAsync(requestId);
                     var orderStatus = hasEnoughStock ? "Scheduled" : "Not enough";
 
-                    // ✅ Map product_type_id từ order_request.product_type (code)
                     int? productTypeId = null;
                     var ptCode = (req.product_type ?? "").Trim();
 
@@ -247,8 +247,8 @@ namespace AMMS.Application.Services
                         code = "TMP-" + Guid.NewGuid().ToString("N"),
                         order_date = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified),
                         delivery_date = req.delivery_date,
-                        status = orderStatus,
-                        payment_status = "Unpaid",
+                        status = "Scheduled",
+                        payment_status = "Deposited",
                         quote_id = req.quote_id,
                         total_amount = est.final_total_cost
                     };

@@ -13,6 +13,8 @@ public partial class user
 
     public string password_hash { get; set; } = null!;
 
+    public string? email { get; set; }
+
     public string? full_name { get; set; }
 
     public int? role_id { get; set; }
