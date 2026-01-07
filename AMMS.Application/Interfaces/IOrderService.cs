@@ -1,5 +1,6 @@
 ﻿using AMMS.Infrastructure.Entities;
 using AMMS.Shared.DTOs.Common;
+using AMMS.Shared.DTOs.Materials;
 using AMMS.Shared.DTOs.Orders;
 
 namespace AMMS.Application.Interfaces

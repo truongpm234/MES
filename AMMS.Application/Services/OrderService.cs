@@ -2,6 +2,7 @@
 using AMMS.Infrastructure.Entities;
 using AMMS.Infrastructure.Interfaces;
 using AMMS.Shared.DTOs.Common;
+using AMMS.Shared.DTOs.Materials;
 using AMMS.Shared.DTOs.Orders;
 
 namespace AMMS.Application.Services
@@ -102,6 +103,15 @@ namespace AMMS.Application.Services
         public Task<string> DeleteDesignFilePath(int orderRequestId)
         {
             return _orderRepo.DeleteDesignFilePath(orderRequestId);
+        }
+
+        public async Task<object> BuyMaterialAndRecalcOrdersAsync(int materialId, BuyMaterialRequestDto body, CancellationToken ct = default)
+        {
+            if (body == null) throw new ArgumentException("Body is required");
+            if (body.quantity <= 0) throw new ArgumentException("quantity must be > 0");
+            var managerUserId = 3;
+
+            return await _orderRepo.BuyMaterialAndRecalcOrdersAsync(materialId, body.quantity, managerUserId, ct);
         }
     }
 }

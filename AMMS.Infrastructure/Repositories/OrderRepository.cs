@@ -492,6 +492,7 @@ namespace AMMS.Infrastructure.Repositories
 
                     // ✅ is_enough from orders
                     is_enough = o.is_enough,
+                    is_buy = o.is_buy,
 
                     available = (double)(m.stock_qty ?? 0m),
                     unit_price = (double)(m.cost_price ?? 0m),
@@ -544,6 +545,11 @@ namespace AMMS.Infrastructure.Repositories
                     bool? isEnoughSummary =
                         anyFalse ? false :
                         (anyTrue && !g.Any(x => x.is_enough == null) ? true : (bool?)null);
+                    var anyBuyFalse = g.Any(x => x.is_buy == false);
+                    var anyBuyTrue = g.Any(x => x.is_buy == true);
+                    bool? isBuySummary =
+                        anyBuyFalse ? false :
+                        (anyBuyTrue && !g.Any(x => x.is_buy == null) ? true : (bool?)null);
 
                     return new MissingMaterialDto
                     {
@@ -558,7 +564,9 @@ namespace AMMS.Infrastructure.Repositories
                         // ✅ quantity = missingBase
                         quantity = missingBase,
                         total_price = totalPriceBase,
-                        is_enough = isEnoughSummary
+                        is_enough = isEnoughSummary,
+                        is_buy = isBuySummary
+
                     };
                 })
                 .Where(x => x.quantity > 0m)
@@ -588,6 +596,209 @@ namespace AMMS.Infrastructure.Repositories
                 return "Delete Success";
             }
             return "Delete False";
+        }
+
+        public async Task<object> BuyMaterialAndRecalcOrdersAsync(
+            int materialId,
+            decimal quantity,
+            int managerUserId,
+            CancellationToken ct = default)
+        {
+            if (materialId <= 0) throw new ArgumentException("materialId invalid");
+            if (quantity <= 0) throw new ArgumentException("quantity must be > 0");
+
+            var strategy = _db.Database.CreateExecutionStrategy();
+
+            return await strategy.ExecuteAsync<object>(async () =>
+            {
+                await using var tx = await _db.Database.BeginTransactionAsync(ct);
+
+                var now = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
+
+                // 1) Load material (tracked)
+                var material = await _db.materials
+                    .AsTracking()
+                    .FirstOrDefaultAsync(m => m.material_id == materialId, ct);
+
+                if (material == null)
+                    throw new ArgumentException($"material_id={materialId} not found");
+
+                // 2) Update stock
+                material.stock_qty = (material.stock_qty ?? 0m) + quantity;
+
+                // 3) Add stock_move IN
+                await _db.stock_moves.AddAsync(new stock_move
+                {
+                    material_id = materialId,
+                    type = "IN",
+                    qty = quantity,
+                    ref_doc = $"BUY-MATERIAL-{materialId}",
+                    user_id = managerUserId,
+                    move_date = now,
+                    note = "Buy material via API",
+                    purchase_id = null
+                }, ct);
+
+                await _db.SaveChangesAsync(ct);
+
+                // 4) Find affected orders (orders that use this material in BOM and not enough yet)
+                var affectedOrderIds = await (
+                    from o in _db.orders.AsNoTracking()
+                    join oi in _db.order_items.AsNoTracking() on o.order_id equals oi.order_id
+                    join b in _db.boms.AsNoTracking() on oi.item_id equals b.order_item_id
+                    where b.material_id == materialId
+                          && (o.is_enough == null || o.is_enough == false)
+                    select o.order_id
+                ).Distinct().ToListAsync(ct);
+
+                if (affectedOrderIds.Count == 0)
+                {
+                    await tx.CommitAsync(ct);
+                    return new
+                    {
+                        materialId,
+                        addedQty = quantity,
+                        newStockQty = material.stock_qty ?? 0m,
+                        affectedOrders = 0,
+                        ordersUpdated = 0,
+                        message = "Stock updated. No affected orders to recalc."
+                    };
+                }
+
+                // 5) Preload usage 30 days OUT for all materials used in affected orders
+                //    (to keep your missing-material logic consistent)
+                var materialIdsInAffectedOrders = await (
+                    from oi in _db.order_items.AsNoTracking()
+                    join b in _db.boms.AsNoTracking() on oi.item_id equals b.order_item_id
+                    where oi.order_id != null && affectedOrderIds.Contains(oi.order_id.Value)
+                          && b.material_id != null
+                    select b.material_id!.Value
+                ).Distinct().ToListAsync(ct);
+
+                var today = DateTime.SpecifyKind(DateTime.UtcNow.Date, DateTimeKind.Unspecified);
+                var historyStart = DateTime.SpecifyKind(today.AddDays(-30), DateTimeKind.Unspecified);
+                var historyEndExclusive = DateTime.SpecifyKind(today.AddDays(1), DateTimeKind.Unspecified);
+
+                var usageLast30 = await _db.stock_moves
+                    .AsNoTracking()
+                    .Where(s =>
+                        s.type == "OUT" &&
+                        s.move_date >= historyStart &&
+                        s.move_date < historyEndExclusive &&
+                        s.material_id != null &&
+                        materialIdsInAffectedOrders.Contains(s.material_id.Value))
+                    .GroupBy(s => s.material_id!.Value)
+                    .Select(g => new
+                    {
+                        MaterialId = g.Key,
+                        UsageLast30Days = g.Sum(x => x.qty ?? 0m)
+                    })
+                    .ToListAsync(ct);
+
+                var usageDict = usageLast30.ToDictionary(
+                    x => x.MaterialId,
+                    x => Math.Round(x.UsageLast30Days, 4)
+                );
+
+                // 6) Recalc each order + update is_buy / is_enough
+                var ordersToUpdate = await _db.orders
+                    .AsTracking()
+                    .Where(o => affectedOrderIds.Contains(o.order_id))
+                    .ToListAsync(ct);
+
+                int updated = 0;
+                int nowEnough = 0;
+
+                foreach (var o in ordersToUpdate)
+                {
+                    // mark is_buy true because you performed a buy action
+                    o.is_buy = true;
+
+                    var enough = await IsOrderEnoughByBomAsync(o.order_id, usageDict, ct);
+
+                    o.is_enough = enough;
+                    if (enough) nowEnough++;
+
+                    updated++;
+                }
+
+                await _db.SaveChangesAsync(ct);
+                await tx.CommitAsync(ct);
+
+                return new
+                {
+                    materialId,
+                    addedQty = quantity,
+                    newStockQty = material.stock_qty ?? 0m,
+                    affectedOrders = affectedOrderIds.Count,
+                    ordersUpdated = updated,
+                    ordersNowEnough = nowEnough,
+                    message = "Stock updated + orders recalculated"
+                };
+            });
+        }
+
+        /// <summary>
+        /// Check if an order is enough materials based on BOM + wastage + safety(30% usage last 30 days),
+        /// using CURRENT materials.stock_qty.
+        /// </summary>
+        private async Task<bool> IsOrderEnoughByBomAsync(
+            int orderId,
+            Dictionary<int, decimal> usageDict,
+            CancellationToken ct)
+        {
+            // load BOM lines for that order
+            var bomLines = await (
+                from oi in _db.order_items.AsNoTracking()
+                join b in _db.boms.AsNoTracking() on oi.item_id equals b.order_item_id
+                join m in _db.materials.AsNoTracking() on b.material_id equals m.material_id
+                where oi.order_id == orderId
+                select new
+                {
+                    MaterialId = m.material_id,
+                    StockQty = m.stock_qty ?? 0m,
+                    Quantity = (decimal)oi.quantity,
+                    QtyPerProduct = b.qty_per_product ?? 0m,
+                    WastagePercent = b.wastage_percent ?? 0m
+                }
+            ).ToListAsync(ct);
+
+            if (bomLines.Count == 0)
+            {
+                // No BOM => cannot guarantee enough -> keep false to be safe
+                return false;
+            }
+
+            // group per material
+            var perMaterial = bomLines
+                .GroupBy(x => x.MaterialId)
+                .Select(g =>
+                {
+                    decimal required = 0m;
+                    foreach (var r in g)
+                    {
+                        var baseQty = Math.Round(r.Quantity * Math.Round(r.QtyPerProduct, 4), 4);
+                        var factor = Math.Round(1m + (Math.Round(r.WastagePercent, 2) / 100m), 4);
+                        var lineRequired = Math.Round(baseQty * factor, 4);
+                        if (lineRequired < 0m) lineRequired = 0m;
+                        required += lineRequired;
+                    }
+
+                    usageDict.TryGetValue(g.Key, out var usage30);
+                    var safety = Math.Round(usage30 * 0.30m, 4);
+
+                    var needed = Math.Round(required + safety, 4);
+                    var available = Math.Round(g.Max(x => x.StockQty), 4);
+
+                    var missing = needed - available;
+                    if (missing < 0m) missing = 0m;
+
+                    return new { MaterialId = g.Key, Missing = missing };
+                })
+                .ToList();
+
+            // If any missing > 0 => not enough
+            return perMaterial.All(x => x.Missing <= 0m);
         }
     }
 }
