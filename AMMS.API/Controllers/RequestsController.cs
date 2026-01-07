@@ -339,7 +339,5 @@ namespace AMMS.API.Controllers
             catch { }
             return (true, "Processed paid OK");
         }
-
-        
     }
 }
