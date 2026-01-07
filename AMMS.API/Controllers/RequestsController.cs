@@ -339,17 +339,5 @@ namespace AMMS.API.Controllers
             catch { }
             return (true, "Processed paid OK");
         }
-
-        [HttpPost("{id:int}/convert-to-order")]
-        public async Task<IActionResult> ConvertToOrder(int id)
-        {
-            var result = await _service.ConvertToOrderAsync(id);
-
-            if (!result.Success)
-                return BadRequest(result);
-
-            return Ok(result);
-        }
-
     }
 }
