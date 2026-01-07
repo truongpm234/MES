@@ -1,4 +1,7 @@
 ﻿using AMMS.Application.Interfaces;
+using AMMS.Application.Services;
+using AMMS.Shared.DTOs.Materials;
+using AMMS.Shared.DTOs.Orders;
 using AMMS.Infrastructure.Entities;
 using AMMS.Shared.DTOs.Purchases;
 using Microsoft.AspNetCore.Mvc;
