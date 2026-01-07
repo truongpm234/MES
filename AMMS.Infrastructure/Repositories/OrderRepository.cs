@@ -478,7 +478,6 @@ namespace AMMS.Infrastructure.Repositories
             NormalizePaging(ref page, ref pageSize);
             var skip = (page - 1) * pageSize;
 
-            // ✅ Lấy line-level nhưng dùng double để tránh Npgsql overflow khi đọc numeric cực lớn
             var lines = await (
                 from oi in _db.order_items.AsNoTracking()
                 join o in _db.orders.AsNoTracking() on oi.order_id equals o.order_id
@@ -491,6 +490,9 @@ namespace AMMS.Infrastructure.Repositories
                     unit = m.unit,
                     request_date = o.delivery_date,
 
+                    // ✅ is_enough from orders
+                    is_enough = o.is_enough,
+
                     available = (double)(m.stock_qty ?? 0m),
                     unit_price = (double)(m.cost_price ?? 0m),
 
@@ -501,11 +503,9 @@ namespace AMMS.Infrastructure.Repositories
                 }
             ).ToListAsync(ct);
 
-            // ✅ Group + tính toán trong memory (tránh SQL numeric vượt decimal)
             static decimal SafeToDecimal(double v, int round)
             {
                 if (double.IsNaN(v) || double.IsInfinity(v)) return 0m;
-                // clamp về range decimal
                 var max = (double)decimal.MaxValue;
                 if (v > max) return decimal.MaxValue;
                 if (v < -max) return decimal.MinValue;
@@ -529,12 +529,21 @@ namespace AMMS.Infrastructure.Repositories
 
                     var needed = SafeToDecimal(neededD, 4);
                     var available = SafeToDecimal(availableD, 4);
-                    var missing = needed - available;
-                    if (missing < 0) missing = 0;
+
+                    // ✅ BASE missing ONLY (no buffer, no rounding)
+                    var missingBase = needed - available;
+                    if (missingBase < 0m) missingBase = 0m;
 
                     var unitPrice = SafeToDecimal(unitPriceD, 2);
-                    var totalPrice = SafeMul(missing, unitPrice);
-                    totalPrice = Math.Round(totalPrice, 2);
+                    var totalPriceBase = SafeMul(missingBase, unitPrice);
+                    totalPriceBase = Math.Round(totalPriceBase, 2);
+
+                    // summary is_enough
+                    var anyFalse = g.Any(x => x.is_enough == false);
+                    var anyTrue = g.Any(x => x.is_enough == true);
+                    bool? isEnoughSummary =
+                        anyFalse ? false :
+                        (anyTrue && !g.Any(x => x.is_enough == null) ? true : (bool?)null);
 
                     return new MissingMaterialDto
                     {
@@ -545,16 +554,17 @@ namespace AMMS.Infrastructure.Repositories
 
                         needed = needed,
                         available = available,
-                        quantity = missing,
 
-                        total_price = totalPrice
+                        // ✅ quantity = missingBase
+                        quantity = missingBase,
+                        total_price = totalPriceBase,
+                        is_enough = isEnoughSummary
                     };
                 })
                 .Where(x => x.quantity > 0m)
                 .OrderByDescending(x => x.quantity)
                 .ToList();
 
-            // ✅ paging sau khi đã group
             var pageRows = grouped.Skip(skip).Take(pageSize + 1).ToList();
             var hasNext = pageRows.Count > pageSize;
             if (hasNext) pageRows.RemoveAt(pageRows.Count - 1);

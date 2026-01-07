@@ -56,8 +56,48 @@ namespace AMMS.Application.Services
         public Task<OrderDetailDto?> GetDetailAsync(int id, CancellationToken ct = default)
             => _orderRepo.GetDetailByIdAsync(id, ct);
 
-        public Task<PagedResultLite<MissingMaterialDto>> GetAllMissingMaterialsAsync(int page, int pageSize, CancellationToken ct = default)
-            => _orderRepo.GetAllMissingMaterialsAsync(page, pageSize, ct);
+        public async Task<PagedResultLite<MissingMaterialDto>> GetAllMissingMaterialsAsync(
+    int page,
+    int pageSize,
+    CancellationToken ct = default)
+        {
+            var result = await _orderRepo.GetAllMissingMaterialsAsync(page, pageSize, ct);
+
+            static decimal RoundUpToTens(decimal value)
+            {
+                if (value <= 0m) return 0m;
+                return Math.Ceiling(value / 10m) * 10m; // 61->70, 74->80
+            }
+
+            if (result.Data == null || result.Data.Count == 0)
+                return result;
+
+            foreach (var x in result.Data)
+            {
+                // Base missing (repo đã set quantity=missingBase)
+                var missingBase = x.quantity;
+                if (missingBase < 0m) missingBase = 0m;
+
+                // +10%
+                var withBuffer = missingBase * 1.10m;
+
+                // round up to tens
+                var rounded = RoundUpToTens(withBuffer);
+
+                // Suy ra unit price từ total_price base / missingBase
+                // (vì DTO không có unit_price)
+                decimal unitPrice = 0m;
+                if (missingBase > 0m && x.total_price > 0m)
+                {
+                    unitPrice = x.total_price / missingBase;
+                }
+
+                x.quantity = rounded;
+                x.total_price = Math.Round(rounded * unitPrice, 2);
+            }
+
+            return result;
+        }
 
         public Task<string> DeleteDesignFilePath(int orderRequestId)
         {
