@@ -21,6 +21,8 @@ public partial class user
 
     public bool? is_active { get; set; }
 
+    public string? phone_number { get; set; }
+
     public DateTime? created_at { get; set; }
 
     public virtual ICollection<customer> customers { get; set; } = new List<customer>();
