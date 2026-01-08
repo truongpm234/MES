@@ -20,16 +20,16 @@ namespace AMMS.API.Controllers
         }
 
         [HttpPost("/login")]
-        public async Task<UserLoginResponseDto?> Login([FromBody] UserLoginRequestDto request)
+        public async Task<IActionResult> Login([FromBody] UserLoginRequestDto request)
         {
             var user = await _userService.Login(request);
             if (user != null)
             {
                 var token = _jwt.GenerateToken(user.user_id, user.role_id);
                 user.jwt = token;
-                return user;
+                return Ok(user);
             }
-            return null;
+            return Unauthorized(new { message = "Email/UserName hoặc mật khẩu không đúng" });
         }
 
         [HttpPost("/register")]

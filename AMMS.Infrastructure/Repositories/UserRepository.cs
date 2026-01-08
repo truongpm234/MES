@@ -18,7 +18,7 @@ namespace AMMS.Infrastructure.Repositories
                 .SingleOrDefaultAsync(u => u.username == req.user_name || u.email == req.email);
 
             if (user == null)
-                throw new Exception("USERNAME_NOT_FOUND");
+                return null;
 
             bool isValidPassword = BCrypt.Net.BCrypt.Verify(
                 req.password,
@@ -26,7 +26,7 @@ namespace AMMS.Infrastructure.Repositories
             );
 
             if (!isValidPassword)
-                throw new Exception("INVALID_PASSWORD");
+                return null;
 
             return new UserLoginResponseDto
             {
