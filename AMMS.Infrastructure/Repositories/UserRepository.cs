@@ -18,7 +18,7 @@ namespace AMMS.Infrastructure.Repositories
                 .SingleOrDefaultAsync(u => u.username == req.user_name || u.email == req.email);
 
             if (user == null)
-                throw new Exception("USERNAME_NOT_FOUND");
+                return null;
 
             bool isValidPassword = BCrypt.Net.BCrypt.Verify(
                 req.password,
@@ -26,7 +26,7 @@ namespace AMMS.Infrastructure.Repositories
             );
 
             if (!isValidPassword)
-                throw new Exception("INVALID_PASSWORD");
+                return null;
 
             return new UserLoginResponseDto
             {
@@ -59,6 +59,26 @@ namespace AMMS.Infrastructure.Repositories
                 full_name = newUser.full_name,
                 role_id = newUser.role_id,
             };
+        }
+
+        public async Task<user?> GetUserForGoogleAuth(string email, string name)
+        {
+            var exitUser = _db.users.SingleOrDefault(u => u.email == email);
+            var newUser = new user();
+            if (exitUser == null)
+            {
+                newUser.email = email;
+                newUser.username = email;
+                newUser.password_hash = "null123";
+                newUser.full_name = name;
+                newUser.created_at = DateTime.Now;
+                newUser.is_active = true;
+                newUser.role_id = 6;
+                _db.users.Add(newUser);
+                await _db.SaveChangesAsync();
+                return newUser;
+            }
+            return exitUser;
         }
 
     }

@@ -1,5 +1,6 @@
 ﻿using AMMS.Application.Interfaces;
 using AMMS.Application.Services;
+using AMMS.Shared.DTOs.Google;
 using AMMS.Shared.DTOs.User;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,28 +8,58 @@ namespace AMMS.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Tags("Auth")]
     public class UserController : ControllerBase
     {
         private readonly IUserService _userService;
         private readonly JWTService _jwt;
+        private readonly GoogleAuthService _googleAuthService;
 
-        public UserController(IUserService userService, JWTService jwt)
+        public UserController(IUserService userService, JWTService jwt, GoogleAuthService googleAuthService)
         {
             _userService = userService;
             _jwt = jwt;
+            _googleAuthService = googleAuthService;
         }
 
         [HttpPost("/login")]
-        public async Task<UserLoginResponseDto?> Login([FromBody] UserLoginRequestDto request)
+        public async Task<IActionResult> Login([FromBody] UserLoginRequestDto request)
         {
             var user = await _userService.Login(request);
             if (user != null)
             {
                 var token = _jwt.GenerateToken(user.user_id, user.role_id);
                 user.jwt = token;
-                return user;
+                return Ok(user);
             }
-            return null;
+            return Unauthorized(new { message = "Email/UserName hoặc mật khẩu không đúng" });
+        }
+
+
+        [HttpPost("/login-with-google")]
+        public async Task<IActionResult> GoogleLogin(GoogleLoginRequestDto req)
+        {
+            var payload = await _googleAuthService.VerifyToken(req.id_token);
+
+            // TODO: check DB user theo payload.Email
+            // TODO: nếu chưa có → tạo user
+            if (payload.EmailVerified)
+            {
+                var token = _jwt.GenerateTokenForGoogle(
+                payload.Email,
+                payload.Name,
+                payload.Subject
+            );
+
+                return Ok(new
+                {
+                    access_token = token,
+                    email = payload.Email,
+                    name = payload.Name,
+                    avatar = payload.Picture
+                });
+            }
+            return BadRequest();
         }
 
         [HttpPost("/register")]
