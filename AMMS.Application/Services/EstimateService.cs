@@ -30,6 +30,13 @@ namespace AMMS.Application.Services
 
         public async Task<PaperEstimateResponse> EstimatePaperAsync(PaperEstimateRequest req)
         {
+            if (req.order_request_id <= 0)
+                throw new ArgumentException("order_request_id is required and must be greater than 0", nameof(req.order_request_id));
+
+            var existingRequest = await _requestRepo.GetByIdAsync(req.order_request_id);
+            if (existingRequest == null)
+                throw new KeyNotFoundException($"Order request with id {req.order_request_id} not found");
+
             ValidateRequest(req);
 
             var paper = await GetPaperMaterial(req.paper_code);
@@ -91,6 +98,12 @@ namespace AMMS.Application.Services
 
         public async Task<CostEstimateResponse> CalculateCostEstimateAsync(CostEstimateRequest req)
         {
+            if (req.order_request_id <= 0)
+                throw new ArgumentException("order_request_id is required and must be greater than 0", nameof(req.order_request_id));
+
+            var existingRequest = await _requestRepo.GetByIdAsync(req.order_request_id);
+            if (existingRequest == null)
+                throw new KeyNotFoundException($"Order request with id {req.order_request_id} not found");
             // =====================
             // 1. VALIDATION
             // =====================
@@ -182,18 +195,29 @@ namespace AMMS.Application.Services
             );
 
             decimal totalProcessCost = Math.Round(processDetails.Sum(x => x.total_cost), 2);
-
-            // =====================
-            // ⭐ 11. DESIGN COST – DỰA VÀO order_request
-            // =====================
+            // ⭐ 11. DESIGN COST – DỰA VÀO order_request + is_send_design từ FE
             var orderReq = await _requestRepo.GetByIdAsync(req.order_request_id);
 
             decimal designCost = 0m;
+
+            // ✅ NẾU FE GỬI is_send_design THÌ CẬP NHẬT VÀO order_request
+            if (orderReq != null && req.is_send_design.HasValue)
+            {
+                orderReq.is_send_design = req.is_send_design.Value;
+                await _requestRepo.UpdateAsync(orderReq);
+                await _requestRepo.SaveChangesAsync();
+            }
+
+            bool isSendDesign =
+                orderReq?.is_send_design
+                ?? req.is_send_design
+                ?? false;
+
             if (orderReq == null ||
-                orderReq.is_send_design == false ||
+                isSendDesign == false ||
                 string.IsNullOrWhiteSpace(orderReq.design_file_path))
             {
-                designCost = 200_000m; // 200k nếu KH chưa gửi thiết kế
+                designCost = 200_000m; 
             }
 
             // =====================
@@ -949,7 +973,7 @@ namespace AMMS.Application.Services
             return result;
         }
 
-        
+
         private static string ResolveProductTypeCode(string productType, string? formProduct)
         {
             productType = (productType ?? "").Trim();
@@ -1017,6 +1041,9 @@ namespace AMMS.Application.Services
         }
         public Task<DepositByRequestResponse?> GetDepositByRequestIdAsync(int requestId, CancellationToken ct = default)
             => _estimateRepo.GetDepositByRequestIdAsync(requestId, ct);
-
+        public async Task<bool> OrderRequestExistsAsync(int orderRequestId)
+        {
+            return await _estimateRepo.OrderRequestExistsAsync(orderRequestId);
+        }
     }
 }
