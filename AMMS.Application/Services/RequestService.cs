@@ -112,8 +112,22 @@ namespace AMMS.Application.Services
             entity.detail_address = req.detail_address ?? entity.detail_address;
             entity.delivery_date = ToUnspecified(req.delivery_date);
             entity.order_request_date = ToUnspecified(req.order_request_date);
-
             entity.product_type = req.product_type ?? entity.product_type;
+            entity.number_of_plates = req.number_of_plates ?? entity.number_of_plates;
+            entity.paper_code = req.paper_code ?? entity.paper_code;
+            entity.paper_name = req.paper_name ?? entity.paper_name;
+            entity.coating_type = req.coating_type ?? entity.coating_type;
+            entity.wave_type = req.wave_type ?? entity.wave_type;
+            entity.product_length_mm = req.product_length_mm ?? entity.product_length_mm;
+            entity.product_width_mm = req.product_width_mm ?? entity.product_width_mm;
+            entity.product_height_mm = req.product_height_mm ?? entity.product_height_mm;
+            entity.glue_tab_mm = req.glue_tab_mm ?? entity.glue_tab_mm;
+            entity.bleed_mm = req.bleed_mm ?? entity.bleed_mm;
+            entity.is_one_side_box = req.is_one_side_box ?? entity.is_one_side_box;
+            entity.print_width_mm = req.print_width_mm ?? entity.print_width_mm;
+            entity.print_height_mm = req.print_height_mm ?? entity.print_height_mm;
+            entity.is_send_design = req.is_send_design ?? entity.is_send_design;
+            entity.production_processes = req.production_processes ?? entity.production_processes;
             entity.process_status = "Verified";
 
             await _requestRepo.UpdateAsync(entity);
@@ -127,6 +141,7 @@ namespace AMMS.Application.Services
                 UpdatedAt = DateTime.Now
             };
         }
+
 
         public async Task CancelAsync(int id, CancellationToken ct = default)
         {
