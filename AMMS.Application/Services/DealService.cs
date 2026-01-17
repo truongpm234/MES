@@ -63,11 +63,12 @@ namespace AMMS.Application.Services
 
             var baseUrl = _config["Deal:BaseUrl"]!;
             var token = Guid.NewGuid().ToString("N");
+            var baseUrlFe = _config["Deal:BaseUrlFe"]!;
 
             var acceptUrl = $"{baseUrl}/api/requests/accept-pay?orderRequestId={orderRequestId}&token={token}";
             var rejectUrl = $"{baseUrl}/api/requests/reject-form?orderRequestId={orderRequestId}&token={token}";
 
-            var orderDetailUrl = $"{baseUrl}/order-detail/{orderRequestId}";
+            var orderDetailUrl = $"{baseUrlFe}/order-detail/{orderRequestId}";
             var hasDesignFile = !string.IsNullOrWhiteSpace(req.design_file_path);
             var customerWillSendDesign = (req.is_send_design ?? false) || !hasDesignFile;
 
