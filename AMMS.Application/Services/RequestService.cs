@@ -275,25 +275,23 @@ namespace AMMS.Application.Services
                     // ✅ order.status luôn Scheduled, is_enough mới phản ánh đủ/thiếu NVL
                     var newOrder = new order
                     {
-                        code = "TMP-ORD", // ✅ <= 20, tránh lỗi varchar(20)
+                        code = "TMP-ORD",
                         order_date = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified),
                         delivery_date = req.delivery_date,
-
                         status = "Scheduled",
                         payment_status = "Deposited",
                         quote_id = req.quote_id,
                         total_amount = est.final_total_cost,
-
-                        is_enough = null,   // sẽ calc sau BOM
+                        is_enough = null,
                         is_buy = false
                     };
 
                     await _orderRepo.AddOrderAsync(newOrder);
                     await _orderRepo.SaveChangesAsync();
 
-                    // set code chuẩn theo order_id
-                    newOrder.code = $"ORD-{newOrder.order_id:00000}"; // <= 20
+                    newOrder.code = $"ORD-{newOrder.order_id:00000}"; 
                     _orderRepo.Update(newOrder);
+
                     await _orderRepo.SaveChangesAsync();
 
                     // ===== order_item =====
@@ -303,28 +301,24 @@ namespace AMMS.Application.Services
                         product_name = req.product_name,
                         quantity = req.quantity ?? 0,
                         design_url = req.design_file_path,
-
                         product_type_id = productTypeId,
-
                         paper_code = req.paper_code,
                         production_process = req.production_processes,
                         paper_name = req.paper_name,
                         glue_type = req.coating_type,
                         wave_type = req.wave_type,
-
                         est_paper_sheets_total = est.sheets_total,
                         est_ink_weight_kg = est.ink_weight_kg,
                         est_coating_glue_weight_kg = est.coating_glue_weight_kg,
                         est_mounting_glue_weight_kg = est.mounting_glue_weight_kg,
                         est_lamination_weight_kg = est.lamination_weight_kg,
-
                         height_mm = req.product_height_mm,
                         length_mm = req.product_length_mm,
                         width_mm = req.product_width_mm
                     };
 
                     await _orderRepo.AddOrderItemAsync(newItem);
-                    await _orderRepo.SaveChangesAsync(); // lấy item_id
+                    await _orderRepo.SaveChangesAsync(); 
 
                     // ===== BOM =====
                     material? paperMaterial = null;
@@ -401,8 +395,6 @@ namespace AMMS.Application.Services
                     await Task.WhenAll(bomTasks);
                     await _bomRepo.SaveChangesAsync();
 
-                    // ===== calc is_enough cho đúng yêu cầu (dùng stock hiện tại) =====
-                    // Nếu BOM có material_id null => không check được stock => coi là NOT enough để an toàn
                     var bomHasNullMaterial = await (
                         from oi in _db.order_items.AsNoTracking()
                         join b in _db.boms.AsNoTracking() on oi.item_id equals b.order_item_id
@@ -446,7 +438,6 @@ namespace AMMS.Application.Services
     .Select(u => (int?)u.user_id)
     .FirstOrDefaultAsync();
 
-                    // Nếu không có "manager" thì fallback consultant_id của order (nếu có)
                     managerId ??= newOrder.consultant_id;
 
                     var now = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);

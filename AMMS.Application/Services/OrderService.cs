@@ -57,17 +57,14 @@ namespace AMMS.Application.Services
         public Task<OrderDetailDto?> GetDetailAsync(int id, CancellationToken ct = default)
             => _orderRepo.GetDetailByIdAsync(id, ct);
 
-        public async Task<PagedResultLite<MissingMaterialDto>> GetAllMissingMaterialsAsync(
-    int page,
-    int pageSize,
-    CancellationToken ct = default)
+        public async Task<PagedResultLite<MissingMaterialDto>> GetAllMissingMaterialsAsync(int page, int pageSize, CancellationToken ct = default)
         {
             var result = await _orderRepo.GetAllMissingMaterialsAsync(page, pageSize, ct);
 
             static decimal RoundUpToTens(decimal value)
             {
                 if (value <= 0m) return 0m;
-                return Math.Ceiling(value / 10m) * 10m; // 61->70, 74->80
+                return Math.Ceiling(value / 10m) * 10m; 
             }
 
             if (result.Data == null || result.Data.Count == 0)

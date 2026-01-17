@@ -19,46 +19,77 @@ namespace AMMS.API.Controllers
         }
 
         [HttpPost("upload")]
-        public async Task<IActionResult> Upload(IFormFile file)
+        public async Task<IActionResult> Upload([FromForm] List<IFormFile> files)
         {
-            if (file == null || file.Length == 0)
-                return BadRequest("File is empty");
+            if (files == null || files.Count == 0)
+                return BadRequest("No file uploaded");
 
-            using var stream = file.OpenReadStream();
+            var urls = new List<string>();
 
-            var url = await _uploadService.UploadAsync(
-                stream,
-                file.FileName,
-                file.ContentType,
-                "uploads");
+            foreach (var file in files)
+            {
+                if (file == null || file.Length == 0)
+                    continue;
 
-            return Ok(new { url });
+                using var stream = file.OpenReadStream();
+
+                var url = await _uploadService.UploadAsync(
+                    stream,
+                    file.FileName,
+                    file.ContentType,
+                    "uploads");
+
+                urls.Add(url);
+            }
+
+            if (urls.Count == 0)
+                return BadRequest("All files are empty");
+
+            return Ok(new
+            {
+                url = string.Join(",", urls)
+            });
         }
 
         [HttpPost("update-design-file/{orderRequestId:int}")]
-        public async Task<IActionResult> UploadDesignFile(int orderRequestId, IFormFile file, CancellationToken ct)
+        public async Task<IActionResult> UploadDesignFile(int orderRequestId, [FromForm] List<IFormFile> files, CancellationToken ct)
         {
-            if (file == null || file.Length == 0)
-                return BadRequest("File is required");
-
-            await using var stream = file.OpenReadStream();
+            if (files == null || files.Count == 0)
+                return BadRequest("At least one file is required");
 
             var folder = "order-requests/designs";
+            var urls = new List<string>();
 
-            var url = await _uploadService.UploadAsync(
-                stream,
-                file.FileName,
-                file.ContentType,
-                folder
-            );
+            foreach (var file in files)
+            {
+                if (file == null || file.Length == 0)
+                    continue;
 
-            await _requestService.UpdateDesignFilePathAsync(orderRequestId, url, ct);
+                await using var stream = file.OpenReadStream();
+
+                var url = await _uploadService.UploadAsync(
+                    stream,
+                    file.FileName,
+                    file.ContentType,
+                    folder
+                );
+
+                urls.Add(url);
+            }
+
+            if (!urls.Any())
+                return BadRequest("All files are empty");
+
+            var joinedUrls = string.Join(",", urls);
+
+            await _requestService.UpdateDesignFilePathAsync(orderRequestId, joinedUrls, ct);
 
             return Ok(new
             {
                 order_request_id = orderRequestId,
-                design_file_path = url
+                design_file_path = joinedUrls,   
             });
         }
+
     }
 }

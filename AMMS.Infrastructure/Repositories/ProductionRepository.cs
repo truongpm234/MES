@@ -54,6 +54,10 @@ namespace AMMS.Infrastructure.Repositories
                 join q in _db.quotes.AsNoTracking() on o.quote_id equals q.quote_id into qj
                 from q in qj.DefaultIfEmpty()
 
+                join r in _db.order_requests.AsNoTracking()
+                on q.order_request_id equals r.order_request_id into rj
+                from r in rj.DefaultIfEmpty()
+
                 join c in _db.customers.AsNoTracking() on q.customer_id equals c.customer_id into cj
                 from c in cj.DefaultIfEmpty()
 
@@ -70,11 +74,7 @@ namespace AMMS.Infrastructure.Repositories
                     product_type_id = pr.product_type_id,
                     production_status = pr.status,
                     order_status = o.status,
-                    customer_name =
-                        o.customer != null
-                            ? (o.customer.company_name ?? o.customer.contact_name ?? "")
-                            : (c != null ? (c.company_name ?? c.contact_name ?? "") : ""),
-
+                    customer_name = !string.IsNullOrWhiteSpace(r.customer_name) ? r.customer_name : (o.customer != null ? (o.customer.company_name ?? o.customer.contact_name ?? "") : ""),
                     first_item_product_name = _db.order_items.AsNoTracking()
                         .Where(i => i.order_id == o.order_id)
                         .OrderBy(i => i.item_id)

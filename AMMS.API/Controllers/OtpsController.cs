@@ -16,7 +16,7 @@ namespace AMMS.API.Controllers
         }
 
         [HttpPost("send-otp")]
-        public async Task<IActionResult> Send([FromBody] SendOtpRequest req)
+        public async Task<IActionResult> SendOTPSendRequest([FromBody] SendOtpRequest req)
         {
             if (req == null || string.IsNullOrWhiteSpace(req.email))
                 return BadRequest(new { message = "email is required" });
@@ -35,7 +35,7 @@ namespace AMMS.API.Controllers
             if (!ok)
                 return BadRequest(new { message = "Invalid or expired OTP" });
 
-            return Ok(new { message = "OTP verified" }); // ✅ 200
+            return Ok(new { message = "OTP verified" });
         }
     }
 }

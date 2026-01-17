@@ -130,11 +130,7 @@ namespace AMMS.API.Controllers
         }
 
         [HttpGet("payos/return")]
-        public async Task<IActionResult> PayOsReturn(
-    [FromQuery] int orderRequestId,
-    [FromQuery] long orderCode,
-    [FromServices] IPaymentRepository paymentRepo,
-    CancellationToken ct)
+        public async Task<IActionResult> PayOsReturn([FromQuery] int orderRequestId, [FromQuery] long orderCode, [FromServices] IPaymentRepository paymentRepo, CancellationToken ct)
         {
             var info = await HttpContext.RequestServices.GetRequiredService<IPayOsService>()
                     .GetPaymentLinkInformationAsync(orderCode, ct);
@@ -158,7 +154,7 @@ namespace AMMS.API.Controllers
             }
 
             var fe = "https://sep490-fe.vercel.app";
-            return Redirect($"{fe}");
+            return Redirect($"{fe}/order-detail/{orderRequestId}");
         }
 
         [HttpGet("payos/cancel")]

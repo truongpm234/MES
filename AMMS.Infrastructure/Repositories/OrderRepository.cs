@@ -264,8 +264,6 @@ namespace AMMS.Infrastructure.Repositories
             }).ToList();
         }
 
-
-
         public async Task AddOrderAsync(order entity)
         {
             await _db.orders.AddAsync(entity);
@@ -799,9 +797,6 @@ namespace AMMS.Infrastructure.Repositories
             // If any missing > 0 => not enough
             return perMaterial.All(x => x.Missing <= 0m);
         }
-
-
-
 
         public async Task<List<order>> GetAllOrderInprocessStatus()
         {
