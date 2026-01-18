@@ -46,10 +46,7 @@ namespace AMMS.API.Controllers
         }
 
         [HttpGet("get-all-production")]
-        public async Task<IActionResult> GetProducingOrders(
-            [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 10,
-            CancellationToken ct = default)
+        public async Task<IActionResult> GetProducingOrders([FromQuery] int page = 1, [FromQuery] int pageSize = 10, CancellationToken ct = default)
         {
             var result = await _service.GetProducingOrdersAsync(page, pageSize, ct);
             return Ok(result);

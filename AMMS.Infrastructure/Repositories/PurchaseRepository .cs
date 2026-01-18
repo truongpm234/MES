@@ -448,7 +448,6 @@ namespace AMMS.Infrastructure.Repositories
                     materialAddMap[materialId] += remain;
                 }
 
-                // ✅ CHANGED: không còn gì để receive -> vẫn set Received nếu đã đủ từ trước
                 if (stockMoves.Count == 0)
                 {
                     var fullyAlready = IsFullyReceived(items, receivedMap, new Dictionary<int, decimal>());

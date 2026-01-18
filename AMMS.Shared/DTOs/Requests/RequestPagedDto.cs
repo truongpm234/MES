@@ -20,5 +20,6 @@ namespace AMMS.Shared.DTOs.Requests
         public string? process_status { get; set; }
         public DateTime? order_request_date { get; set; }
         public decimal? final_cost { get; set; }
+        public decimal? deposit_amount { get; set; }
     }
 }

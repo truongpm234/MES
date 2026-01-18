@@ -47,12 +47,10 @@ namespace AMMS.Infrastructure.Repositories
 
             if (entity == null) return;
 
-            // Nếu đã convert sang order thì bạn có thể chặn cancel (tuỳ rule)
-            // Ở đây mình cho phép cancel nếu chưa có order_id
             if (entity.order_id != null)
                 throw new InvalidOperationException("This request is already linked to an order, cannot cancel.");
 
-            entity.process_status = "Cancel"; // hoặc "Cancelled"
+            entity.process_status = "Cancel";
             _db.order_requests.Update(entity);
         }
         public Task<int> CountAsync()
@@ -68,7 +66,7 @@ namespace AMMS.Infrastructure.Repositories
                 join ce in _db.cost_estimates.AsNoTracking()
                     on r.order_request_id equals ce.order_request_id into ceJoin
                 from ce in ceJoin
-                    .OrderByDescending(x => x.estimate_id) // lấy estimate mới nhất nếu có nhiều
+                    .OrderByDescending(x => x.estimate_id)
                     .Take(1)
                     .DefaultIfEmpty()
 
@@ -90,7 +88,8 @@ namespace AMMS.Infrastructure.Repositories
                     coating_type = r.coating_type,
                     process_status = r.process_status,
                     order_request_date = r.order_request_date,
-                    final_cost = ce != null ? ce.final_total_cost : null
+                    final_cost = ce != null ? ce.final_total_cost : null,
+                    deposit_amount = ce != null ? ce.deposit_amount : null
                 }
             )
             .Skip(skip)
